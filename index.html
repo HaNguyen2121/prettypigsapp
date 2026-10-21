@@ -28,12 +28,19 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .ln{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px dashed var(--line)}.ln b{font-family:"IBM Plex Mono"}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600}
 [hidden]{display:none!important}
+.vwrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3}.vwrap video{width:100%;height:100%;object-fit:cover;display:block}
+.guide{position:absolute;left:6%;right:6%;top:30%;bottom:30%;border:3px solid #ff3b5c;border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.two .btn{padding:12px 8px}
+.tot{font-size:14px}.tot b{font:700 18px 'IBM Plex Mono',monospace;color:var(--teal)}
+.tabs{display:flex;gap:6px}.tabs .btn{padding:6px 10px;font-size:12px}.tabs .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.sk{display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);font-size:14px}
+.sk .n{font-family:'IBM Plex Mono',monospace;text-align:right;min-width:2.5ch}.sk .n.t{font-weight:700;color:var(--teal)}.skh{font-size:11px;color:var(--mut);font-weight:700;text-transform:uppercase}
 .chip{border:1px solid var(--line);background:var(--s);font:600 13px 'IBM Plex Mono',monospace;padding:6px 10px;border-radius:8px;cursor:pointer}.r .mono{white-space:nowrap}.hsd{font-size:12px;color:var(--teal);font-weight:600}
 .rt{display:flex;align-items:center;gap:10px;flex-shrink:0}.del{border:1px solid var(--line);background:var(--s);color:var(--warn);font:600 12px inherit;font-family:inherit;padding:6px 10px;border-radius:8px;cursor:pointer}.del.arm{background:var(--warn);color:#fff;border-color:var(--warn)}
 .stack{display:flex;flex-direction:column;gap:6px;margin-top:10px}.stack .st{margin-top:4px}.stack .btn{margin-top:6px}
 details summary{cursor:pointer;padding:4px 0}
 </style></head><body>
-<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><button class="btn" id="logout" hidden style="padding:5px 10px;font-size:12px;white-space:nowrap">Đổi kho</button></div></div></header>
+<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
 <main class="w">
   <section id="loginBox" class="card">
     <div class="eb">Đăng nhập</div>
@@ -43,11 +50,17 @@ details summary{cursor:pointer;padding:4px 0}
       <label class="st">Tên người đếm</label><input id="who" placeholder="vd: Hà">
     <button class="btn p big" id="loginBtn">Vào kho</button></div><div class="st" id="lst"></div>
   </section>
+  <section id="stock" hidden><div class="card">
+    <div class="row" style="justify-content:space-between"><div class="eb">Tồn kho tổng (Hip + Đù)</div><button class="btn" id="skRefresh">Làm mới</button></div>
+    <input id="skQ" placeholder="Tìm tên, hãng hoặc mã HH"><div class="st" id="skInfo"></div><div id="skList"></div>
+    <div class="st">Cách tính: mỗi kho lấy số của lần kiểm gần nhất có đếm món đó (ngày ghi dưới tên).</div></div></section>
   <section id="app" hidden>
     <div class="card">
       <div class="row"><label class="st" style="margin:0">Đợt ngày</label><input type="date" id="day"></div>
-      <label class="btn p big">Chụp mã vạch<input type="file" id="photo" accept="image/*" capture="environment"></label>
-      <label class="btn t big">Chụp tên sản phẩm<input type="file" id="photoName" accept="image/*" capture="environment"></label>
+      <button class="btn p big" id="liveBtn">Quét liên tục bằng camera</button>
+      <div id="live" hidden><div class="vwrap"><video id="lvVideo" playsinline muted></video><div class="guide"></div></div><div class="st" id="lvMsg"></div></div>
+      <div class="row two"><label class="btn">Chụp ảnh mã vạch<input type="file" id="photo" accept="image/*" capture="environment"></label>
+      <label class="btn t">Chụp tên sản phẩm<input type="file" id="photoName" accept="image/*" capture="environment"></label></div>
       <form class="row" id="cf"><input id="code" inputmode="numeric" placeholder="Nhập hoặc quét mã vạch" style="flex:1;font-family:'IBM Plex Mono'"><button class="btn">Tìm</button></form>
       <button class="btn t" id="byName">Hàng không có mã vạch? Tìm theo tên</button>
       <div class="st" id="st">Chụp mã vạch, hoặc chụp mặt trước hộp (thấy rõ tên hãng, tên sản phẩm, dung tích).</div>
@@ -77,11 +90,11 @@ $('#loginBtn').onclick=async()=>{
   $('#lst').textContent='Đang tải danh mục…';
   try{ const d=await run('getCatalog',S.kho,S.pin); S.cat=d.cat.map(c=>{c.f=fold(c.join(' '));c.fb=fold(c[2]);return c}); S.by={};S.cat.forEach(c=>S.by[c[0]]=c); S.bc=d.bc; setBrands(S.cat.map(c=>c[2]).concat(Object.values(S.bc).map(v=>v[2])));
     LS.s('kho',S.kho);LS.s('pin',S.pin);LS.s('who',S.who);
-    $('#loginBox').hidden=true;$('#app').hidden=false;$('#logout').hidden=false;$('#hdr').textContent=($('#kho').selectedOptions[0].text)+' · '+S.who+' · '+S.cat.length+' mã hàng';
+    $('#loginBox').hidden=true;$('#app').hidden=false;$('#tabs').hidden=false;showStock(false);$('#hdr').textContent=($('#kho').selectedOptions[0].text)+' · '+S.who+' · '+S.cat.length+' mã hàng';
     loadSum();
   }catch(e){$('#lst').textContent=e.message||'Không vào được kho.'}
 };
-$('#logout').onclick=()=>{S.cur=null;draw();$('#app').hidden=true;$('#logout').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
+$('#logout').onclick=()=>{stopLive();showStock(false);S.cur=null;draw();$('#app').hidden=true;$('#stock').hidden=true;$('#tabs').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
 $('#day').onchange=e=>{S.day=e.target.value||today();loadSum()};
 $('#refresh').onclick=loadSum;
 
@@ -111,12 +124,48 @@ function ocrSearch(t,brand,vol){const ws=[...new Set(fold(t).split(/[^a-z0-9]+/)
   return o.sort((a,b)=>b[0]-a[0]).slice(0,15).map(x=>x[1])}
 const rowsHtml=a=>a.map(x=>`<button class="r" data-h="${esc(x[0])}"><span><span class="b">${esc(x[2])}</span><br>${esc(x[1])}</span><span class="mono">${esc(x[0])}</span></button>`).join('');
 
-async function decode(file){const bmp=await createImageBitmap(file);const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
-  const cv=document.createElement('canvas');cv.width=bmp.width*k;cv.height=bmp.height*k;cv.getContext('2d').drawImage(bmp,0,0,cv.width,cv.height);
-  if('BarcodeDetector'in window){try{const r=await new BarcodeDetector().detect(cv);if(r[0])return r[0].rawValue}catch(e){}}
-  const Z=window.ZXing,h=new Map();h.set(Z.DecodeHintType.TRY_HARDER,true);const rd=new Z.MultiFormatReader();rd.setHints(h);
-  const tr=c=>{try{return rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c)))).getText()}catch(e){return null}};
-  let r=tr(cv);if(r)return r;const rc=document.createElement('canvas');rc.width=cv.height;rc.height=cv.width;const x=rc.getContext('2d');x.translate(rc.width/2,rc.height/2);x.rotate(Math.PI/2);x.drawImage(cv,-cv.width/2,-cv.height/2);return tr(rc)}
+const BFMT=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf'];
+let BD=null;try{if('BarcodeDetector'in window)BD=new BarcodeDetector({formats:BFMT})}catch(e){BD=null}
+let ZR=null;function zr(){if(ZR)return ZR;const Z=window.ZXing,h=new Map();h.set(Z.DecodeHintType.TRY_HARDER,true);
+  h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E,Z.BarcodeFormat.CODE_128,Z.BarcodeFormat.CODE_39,Z.BarcodeFormat.ITF]);
+  ZR=new Z.MultiFormatReader();ZR.setHints(h);return ZR}
+function zx(c){const Z=window.ZXing;if(!Z)return null;const src=new Z.HTMLCanvasElementLuminanceSource(c);
+  for(const B of [Z.HybridBinarizer,Z.GlobalHistogramBinarizer]){try{return zr().decode(new Z.BinaryBitmap(new B(src))).getText()}catch(e){}}return null}
+function crop(src,x,y,w,h,maxW,rot){const k=Math.min(1,maxW/w);const c=document.createElement('canvas');const W=Math.round(w*k),H=Math.round(h*k);
+  if(rot){c.width=H;c.height=W}else{c.width=W;c.height=H}const g=c.getContext('2d');
+  if(rot){g.translate(H/2,W/2);g.rotate(Math.PI/2);g.drawImage(src,x,y,w,h,-W/2,-H/2,W,H)}else g.drawImage(src,x,y,w,h,0,0,W,H);return c}
+async function detectOn(c){if(BD){try{const r=await BD.detect(c);if(r[0])return r[0].rawValue}catch(e){}}return zx(c)}
+async function decode(file){const bmp=await createImageBitmap(file);const W=bmp.width,H=bmp.height;
+  const tries=[[0,0,W,H,1600,0],[0,0,W,H,900,0],[0,0,W,H,1600,1]];
+  for(const f of [.5,.35,.65,.2,.8]){const h=H*.22;tries.push([0,Math.max(0,H*f-h/2),W,h,1400,0])}
+  for(const f of [.5,.35,.65]){const w=W*.3;tries.push([Math.max(0,W*f-w/2),0,w,H,1400,1])}
+  tries.push([W*.15,H*.15,W*.7,H*.7,1200,0]);
+  for(const gx of [0,.25,.5])for(const gy of [.1,.3,.5])tries.push([W*gx,H*gy,W*.5,H*.4,1300,0]);
+  for(const t of tries){const r=await detectOn(crop(bmp,...t));if(r)return r}
+  for(const ang of [-10,10,-20,20]){const c=tilt(bmp,ang);const r=await detectOn(c);if(r)return r}
+  return null}
+function tilt(src,deg){const W=src.width,H=src.height,k=Math.min(1,1500/Math.max(W,H));const c=document.createElement('canvas');c.width=W*k;c.height=H*k;const g=c.getContext('2d');
+  g.fillStyle='#bbb';g.fillRect(0,0,c.width,c.height);g.translate(c.width/2,c.height/2);g.rotate(deg*Math.PI/180);g.drawImage(src,-c.width/2,-c.height/2,c.width,c.height);return c}
+
+/* ---- Quét liên tục bằng camera ---- */
+const LV={on:false,stream:null,last:'',lastAt:0,cand:'',candN:0,busy:false,tick:0};
+function beep(){try{const a=beep.ctx||(beep.ctx=new (window.AudioContext||window.webkitAudioContext)());const o=a.createOscillator(),g=a.createGain();o.frequency.value=1250;g.gain.value=.08;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.09)}catch(e){}try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}}
+async function startLive(){if(LV.on)return;const v=$('#lvVideo');
+  try{LV.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}})}
+  catch(e){st('Không mở được camera. Cho phép trình duyệt dùng camera rồi thử lại.',true);return}
+  try{const tr=LV.stream.getVideoTracks()[0],cp=tr.getCapabilities?tr.getCapabilities():{};if(cp.focusMode&&cp.focusMode.includes('continuous'))await tr.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}
+  v.srcObject=LV.stream;await v.play().catch(()=>{});LV.on=true;$('#live').hidden=false;$('#liveBtn').textContent='Dừng quét';$('#lvMsg').textContent='Đưa mã vạch vào khung đỏ. Mỗi lần nhận = +1. Đếm món giống nhau: đưa ra khỏi khung rồi đưa món tiếp theo vào.';loopLive()}
+function stopLive(){LV.on=false;if(LV.stream)LV.stream.getTracks().forEach(t=>t.stop());LV.stream=null;$('#live').hidden=true;$('#liveBtn').textContent='Quét liên tục bằng camera'}
+async function loopLive(){if(!LV.on)return;const v=$('#lvVideo');
+  if(!LV.busy&&v.videoWidth&&!(S.cur&&!S.cur.it)){LV.busy=true;LV.tick++;
+    const W=v.videoWidth,H=v.videoHeight;const t=LV.tick%3;
+    const c=t===0?crop(v,0,H*.3,W,H*.4,1100,0):t===1?crop(v,0,0,W,H,900,0):crop(v,W*.3,0,W*.4,H,1100,1);
+    const code=await detectOn(c);LV.busy=false;
+    if(code){const now=Date.now();
+      if(code===LV.last&&now-LV.lastAt<2000){LV.lastAt=now}
+      else{if(LV.cand===code)LV.candN++;else{LV.cand=code;LV.candN=1}
+        if(LV.candN>=2||BD){LV.last=code;LV.lastAt=now;LV.cand='';beep();lookup(code);$('#lvMsg').textContent=S.cur&&S.cur.it?'✓ +1 · '+S.cur.it.name:'Mã mới '+code+' — chọn sản phẩm bên dưới, xong quét tiếp'}}}}
+  setTimeout(loopLive,120)}
 
 $('#photo').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc mã vạch…');
   try{const r=await decode(f);if(r)lookup(r);else st('Chưa đọc được mã. Chụp gần, đủ sáng, mã vạch nằm ngang.',true)}catch(x){st('Không mở được ảnh.',true)}};
@@ -125,6 +174,23 @@ $('#photoName').onchange=async e=>{const f=e.target.files[0];e.target.value='';i
     S.cur={bc:S.cur&&!S.cur.it?S.cur.bc:null,it:null,ocr:Object.assign(p,{res})};
     st(res.length?'Đọc được'+(p.brand||p.vol?': '+[p.brand,p.vol].filter(Boolean).join(' · '):'')+'. Chọn đúng sản phẩm bên dưới.':'Chưa khớp sản phẩm nào. Sửa tên rồi bấm Thêm hàng mới, hoặc chụp lại gần hơn.',!res.length);draw()}
   catch(x){st(x.message||'Không đọc được ảnh.',true)}};
+function showStock(on){$('#stock').hidden=!on;$('#app').hidden=on;$('#tabCount').classList.toggle('on',!on);$('#tabStock').classList.toggle('on',on);if(on){stopLive();loadStock()}}
+$('#tabCount').onclick=()=>showStock(false);$('#tabStock').onclick=()=>showStock(true);$('#skRefresh').onclick=()=>loadStock();
+$('#skQ').oninput=()=>renderStock();
+const dshort=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'—';
+async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';try{S.stock=await run('getStock',S.kho,S.pin);renderStock()}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message}}
+function renderStock(){const rows=S.stock||[];const q=fold($('#skQ').value).split(/\s+/).filter(Boolean);
+  const f=rows.filter(r=>{const t=fold(r.join(' '));return q.every(w=>t.includes(w))});
+  let th=0,td=0;f.forEach(r=>{th+=r[3];td+=r[5]});
+  $('#skInfo').textContent=f.length+' mã hàng · Hip '+th+' · Đù '+td+' · Tổng '+(th+td);
+  const g={};f.forEach(r=>(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r));
+  let h='<div class="sk skh"><span>Sản phẩm</span><span class="n">Hip</span><span class="n">Đù</span><span class="n">Tổng</span></div>',n=0;
+  for(const b of Object.keys(g).sort()){if(n>400)break;const a=g[b];h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${a.reduce((s,r)=>s+r[3]+r[5],0)}</span></h3>`;
+    for(const r of a.sort((x,y)=>x[1].localeCompare(y[1]))){n++;h+=`<div class="sk"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · Hip ${dshort(r[4])} · Đù ${dshort(r[6])}${r[7]?' · Batch '+esc(r[7]):''}</span></span><span class="n">${r[3]}</span><span class="n">${r[5]}</span><span class="n t">${r[3]+r[5]}</span></div>`}
+    h+='</div>'}
+  if(n>400)h+='<div class="st">Đang hiện 400 dòng đầu — gõ ô tìm để lọc.</div>';
+  $('#skList').innerHTML=f.length?h:'<div class="st">Chưa có dữ liệu tồn kho.</div>'}
+$('#liveBtn').onclick=()=>LV.on?stopLive():startLive();
 $('#cf').onsubmit=e=>{e.preventDefault();lookup($('#code').value)};
 $('#byName').onclick=()=>{S.cur={bc:null,it:null};draw()};
 
@@ -134,7 +200,7 @@ function lookup(raw){const bc=String(raw||'').replace(/\s+/g,'');if(!bc)return;$
 
 function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return}
   if(c.it){box.innerHTML=`<div class="card hit"><div class="eb">${esc(c.it.brand||'')}${c.bc?' · <span class="mono">'+esc(c.bc)+'</span>':''}</div><div><b>${esc(c.it.name)}</b></div><div class="mono">${esc(c.it.hh||'Hàng mới')}</div>
-    <div class="st">Số lượng vừa đếm cho món này — bấm + / − nếu đếm nhiều cái</div><div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
+    <div class="tot">Tổng đã đếm trong đợt: <b id="tot">${totalOf(c.it)}</b></div><div class="st">Số vừa bấm cho món này — bấm + / − nếu đếm nhiều cái</div><div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
     <div class="st" style="margin-top:4px">Batch code (in/dập dưới đáy hộp)${c.batch?' · đã lưu: <b class="mono">'+esc(c.batch)+'</b>':''}</div>
     <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono';text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><label class="btn">Chụp<input type="file" id="btPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="btSave">Lưu</button></div>
     <div class="row" id="btChips">${(c.btChips||[]).map(t=>`<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`;
@@ -175,7 +241,8 @@ function add(it,d){S.cur.n=(S.cur.n||0)+d;draw();toast((d>0?'+':'')+d+' · '+it.
   busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,it.hh,it.name,it.brand,d,S.cur?.bc||'',S.who,S.cur?.batch||'').then(renderSum).catch(e=>st('Chưa ghi được: '+e.message,true)))}
 
 function loadSum(){$('#sumT').textContent='Đợt kiểm '+S.day.split('-').reverse().join('/');run('getSummary',S.kho,S.pin,S.day).then(renderSum).catch(e=>st(e.message,true))}
-function renderSum(rows){const el=$('#sum');S.rows=rows||[];if(!rows||!rows.length){el.innerHTML='<div class="st">Chưa có món nào trong đợt này. Chụp mã vạch hoặc tìm theo tên để bắt đầu.</div>';return}
+function totalOf(it){const r=(S.rows||[]).find(r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name));return r?r[3]:0}
+function renderSum(rows){const el=$('#sum');S.rows=rows||[];if($('#tot')&&S.cur&&S.cur.it)$('#tot').textContent=totalOf(S.cur.it);if(!rows||!rows.length){el.innerHTML='<div class="st">Chưa có món nào trong đợt này. Chụp mã vạch hoặc tìm theo tên để bắt đầu.</div>';return}
   const g={};rows.forEach(r=>{(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r)});let tot=0;rows.forEach(r=>tot+=r[3]);
   let h=`<div class="st">${rows.length} mã hàng · ${tot} sản phẩm</div>`;
   for(const b of Object.keys(g).sort()){h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${g[b].reduce((s,r)=>s+r[3],0)}</span></h3>`;
@@ -185,6 +252,6 @@ $('#sum').onclick=async e=>{const h=e.target.closest('.hsd');if(h){try{navigator
   const b=e.target.closest('.del');if(!b)return;
   if(!b.classList.contains('arm')){$('#sum').querySelectorAll('.del.arm').forEach(x=>{x.classList.remove('arm');x.textContent='Xoá'});b.classList.add('arm');b.textContent='Chắc chắn xoá?';return}
   const r=S.rows[+b.dataset.i];if(!r)return;b.disabled=true;b.textContent='Đang xoá…';
-  try{const rows=await run('addCount',S.kho,S.pin,S.day,r[0],r[1],r[2],-r[3],'',S.who);renderSum(rows);toast('Đã xoá · '+r[1].slice(0,40));if(S.cur&&S.cur.it&&S.cur.it.name===r[1]){S.cur=null;draw()}}
+  try{const rows=await run('deleteItem',S.kho,S.pin,S.day,r[0],r[1],r[2]);renderSum(rows);toast('Đã xoá · '+r[1].slice(0,40));if(S.cur&&S.cur.it&&S.cur.it.name===r[1]){S.cur=null;draw()}}
   catch(x){b.disabled=false;b.textContent='Xoá';st('Chưa xoá được: '+x.message,true)}};
 </script></body></html>
