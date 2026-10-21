@@ -31,6 +31,7 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .vwrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3}.vwrap video{width:100%;height:100%;object-fit:cover;display:block}
 .guide{position:absolute;left:6%;right:6%;top:30%;bottom:30%;border:3px solid #ff3b5c;border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.two .btn{padding:12px 8px}
+.xp{color:#b3261e;font-weight:700}.sn{color:var(--warn);font-weight:700}.okd{color:var(--teal);font-weight:600}
 .tot{font-size:14px}.tot b{font:700 18px 'IBM Plex Mono',monospace;color:var(--teal)}
 .tabs{display:flex;gap:6px}.tabs .btn{padding:6px 10px;font-size:12px}.tabs .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .sk{display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);font-size:14px}
@@ -124,6 +125,25 @@ function ocrSearch(t,brand,vol){const ws=[...new Set(fold(t).split(/[^a-z0-9]+/)
   return o.sort((a,b)=>b[0]-a[0]).slice(0,15).map(x=>x[1])}
 const rowsHtml=a=>a.map(x=>`<button class="r" data-h="${esc(x[0])}"><span><span class="b">${esc(x[2])}</span><br>${esc(x[1])}</span><span class="mono">${esc(x[0])}</span></button>`).join('');
 
+/* ---- Tính ngày sản xuất từ batch code ---- */
+const BK=b=>fold(b).replace(/[^a-z0-9]/g,'');
+const ELC=new Set(['esteelauder','clinique','origins','mac','maccosmetics','bobbibrown','lamer','smashbox']);
+const LOR=new Set(['kiehls','lancome','urbandecay','pureology']);
+const BBW=new Set(['bathbodyworks','bathandbodyworks']);
+const LOR_Y='ABCDEFGHJKLMNPRSTVWXYZ';/* A=2004, chu ky 22 nam, bo I O Q U */
+function pickYear(cands,m){const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;const ok=cands.filter(y=>y<cy||(y===cy&&m<=cm));return ok.length?Math.max(...ok):null}
+function decodeBatch(brand,code){const b=BK(brand),c=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');let m,y,rule;
+  if(ELC.has(b)){const r=c.match(/^[A-Z0-9]([1-9ABC])(\d)[A-Z0-9]?$/);if(!r)return null;m='123456789ABC'.indexOf(r[1])+1;const d=+r[2];y=pickYear([0,1,2,3].map(k=>2000+d+10*k).filter(x=>x<2040),m);rule='Estée Lauder'}
+  else if(LOR.has(b)){const r=c.match(/^\d{2}([A-Z])([1-9OND])[A-Z0-9]{0,5}$/);if(!r)return null;const i=LOR_Y.indexOf(r[1]);if(i<0)return null;m=r[2]==='O'?10:r[2]==='N'?11:r[2]==='D'?12:+r[2];y=pickYear([2004+i,2026+i],m);rule="L'Oréal"}
+  else if(BBW.has(b)){const r=c.match(/^(\d)(\d{3})[A-Z0-9]*$/);if(!r)return null;const doy=+r[2];if(doy<1||doy>366)return null;const d=+r[1];
+    const cand=[];for(let yy=2010;yy<2040;yy++)if(yy%10===d)cand.push(yy);const dt=yy=>new Date(yy,0,doy);m=null;
+    const now=new Date();const ok=cand.filter(yy=>dt(yy)<=now);if(!ok.length)return null;y=Math.max(...ok);m=dt(y).getMonth()+1;rule='Bath & Body Works'}
+  else return null;
+  if(!y)return null;const ex=new Date(y,m-1+36,1);const mo=(new Date().getFullYear()-y)*12+(new Date().getMonth()+1-m);
+  return{mfg:String(m).padStart(2,'0')+'/'+y,exp:String(ex.getMonth()+1).padStart(2,'0')+'/'+ex.getFullYear(),age:mo,rule,expired:ex<=new Date(),soon:!(ex<=new Date())&&(ex-new Date())<183*864e5}}
+function batchInfo(brand,batches){return String(batches||'').split(', ').filter(Boolean).map(bc=>{const d=decodeBatch(brand,bc);
+  return esc(bc)+(d?` <span class="${d.expired?'xp':d.soon?'sn':'okd'}">NSX ${d.mfg} · HSD~${d.exp}</span>`:'')}).join(' · ')}
+
 const BFMT=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf'];
 let BD=null;try{if('BarcodeDetector'in window)BD=new BarcodeDetector({formats:BFMT})}catch(e){BD=null}
 let ZR=null;function zr(){if(ZR)return ZR;const Z=window.ZXing,h=new Map();h.set(Z.DecodeHintType.TRY_HARDER,true);
@@ -186,7 +206,7 @@ function renderStock(){const rows=S.stock||[];const q=fold($('#skQ').value).spli
   const g={};f.forEach(r=>(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r));
   let h='<div class="sk skh"><span>Sản phẩm</span><span class="n">Hip</span><span class="n">Đù</span><span class="n">Tổng</span></div>',n=0;
   for(const b of Object.keys(g).sort()){if(n>400)break;const a=g[b];h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${a.reduce((s,r)=>s+r[3]+r[5],0)}</span></h3>`;
-    for(const r of a.sort((x,y)=>x[1].localeCompare(y[1]))){n++;h+=`<div class="sk"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · Hip ${dshort(r[4])} · Đù ${dshort(r[6])}${r[7]?' · Batch '+esc(r[7]):''}</span></span><span class="n">${r[3]}</span><span class="n">${r[5]}</span><span class="n t">${r[3]+r[5]}</span></div>`}
+    for(const r of a.sort((x,y)=>x[1].localeCompare(y[1]))){n++;h+=`<div class="sk"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · Hip ${dshort(r[4])} · Đù ${dshort(r[6])}${r[7]?'<br>Batch '+batchInfo(r[2],r[7]):''}</span></span><span class="n">${r[3]}</span><span class="n">${r[5]}</span><span class="n t">${r[3]+r[5]}</span></div>`}
     h+='</div>'}
   if(n>400)h+='<div class="st">Đang hiện 400 dòng đầu — gõ ô tìm để lọc.</div>';
   $('#skList').innerHTML=f.length?h:'<div class="st">Chưa có dữ liệu tồn kho.</div>'}
@@ -203,10 +223,11 @@ function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return
     <div class="tot">Tổng đã đếm trong đợt: <b id="tot">${totalOf(c.it)}</b></div><div class="st">Số vừa bấm cho món này — bấm + / − nếu đếm nhiều cái</div><div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
     <div class="st" style="margin-top:4px">Batch code (in/dập dưới đáy hộp)${c.batch?' · đã lưu: <b class="mono">'+esc(c.batch)+'</b>':''}</div>
     <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono';text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><label class="btn">Chụp<input type="file" id="btPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="btSave">Lưu</button></div>
-    <div class="row" id="btChips">${(c.btChips||[]).map(t=>`<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`;
+    <div class="st" id="btDec"></div><div class="row" id="btChips">${(c.btChips||[]).map(t=>`<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`;
     $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>add(c.it,1);$('#x').onclick=()=>{S.cur={bc:c.bc,it:null};draw()};
-    $('#bt').oninput=e=>c.btDraft=e.target.value;
-    $('#btChips').onclick=e=>{const t=e.target.closest('.chip');if(t){$('#bt').value=c.btDraft=t.dataset.t}};
+    const showDec=()=>{const v=$('#bt').value.trim();const d=v&&decodeBatch(c.it.brand,v);$('#btDec').innerHTML=!v?'':d?`<span class="${d.expired?'xp':d.soon?'sn':'okd'}">Ngày sản xuất ${d.mfg} · HSD ước tính ${d.exp} (36 tháng, theo quy tắc ${esc(d.rule)})</span>`:'Chưa có quy tắc tự tính cho hãng/mã này — dùng nút Tra HSD trong danh sách.'};
+    $('#bt').oninput=e=>{c.btDraft=e.target.value;showDec()};showDec();
+    $('#btChips').onclick=e=>{const t=e.target.closest('.chip');if(t){$('#bt').value=c.btDraft=t.dataset.t;showDec()}};
     $('#btSave').onclick=()=>{const v=$('#bt').value.trim().toUpperCase().replace(/\s+/g,'');if(!v)return st('Nhập batch code trước.',true);
       c.batch=v;c.btDraft=undefined;c.btChips=[];draw();toast('Đã lưu batch '+v);
       busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,c.it.hh,c.it.name,c.it.brand,0,c.bc||'',S.who,v).then(renderSum).catch(e=>st('Chưa lưu được batch: '+e.message,true)))};
@@ -246,7 +267,7 @@ function renderSum(rows){const el=$('#sum');S.rows=rows||[];if($('#tot')&&S.cur&
   const g={};rows.forEach(r=>{(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r)});let tot=0;rows.forEach(r=>tot+=r[3]);
   let h=`<div class="st">${rows.length} mã hàng · ${tot} sản phẩm</div>`;
   for(const b of Object.keys(g).sort()){h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${g[b].reduce((s,r)=>s+r[3],0)}</span></h3>`;
-    for(const r of g[b].sort((a,c)=>a[1].localeCompare(c[1])))h+=`<div class="ln"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · ${esc(r[4])}</span>${r[5]?`<br><span class="mono">Batch: ${esc(r[5])}</span> <a class="hsd" href="https://checkcosmetic.net/" target="_blank" rel="noopener" data-c="${esc(r[5].split(', ')[0])}">Tra HSD</a>`:''}</span><span class="rt"><b>${r[3]}</b><button class="del" data-i="${S.rows.indexOf(r)}">Xoá</button></span></div>`;h+='</div>'}
+    for(const r of g[b].sort((a,c)=>a[1].localeCompare(c[1])))h+=`<div class="ln"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · ${esc(r[4])}</span>${r[5]?`<br><span class="mono">Batch: ${batchInfo(r[2],r[5])}</span> <a class="hsd" href="https://checkcosmetic.net/" target="_blank" rel="noopener" data-c="${esc(r[5].split(', ')[0])}">Tra HSD</a>`:''}</span><span class="rt"><b>${r[3]}</b><button class="del" data-i="${S.rows.indexOf(r)}">Xoá</button></span></div>`;h+='</div>'}
   el.innerHTML=h}
 $('#sum').onclick=async e=>{const h=e.target.closest('.hsd');if(h){try{navigator.clipboard.writeText(h.dataset.c)}catch(x){}toast('Đã copy batch '+h.dataset.c+' — dán vào trang tra cứu');return}
   const b=e.target.closest('.del');if(!b)return;
