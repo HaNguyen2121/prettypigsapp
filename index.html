@@ -19,7 +19,7 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .st{font-size:13px;color:var(--mut);min-height:1.2em}.st.e{color:var(--warn)}
 .eb{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 .mono{font-family:"IBM Plex Mono",monospace;font-size:12px}
-.qty{display:flex;gap:10px;align-items:center}.qty button{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--s);font-size:20px}
+.qty{display:flex;gap:10px;align-items:center}.qty button:not(.btn){width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--s);font-size:20px}
 .qty b{font:700 22px "IBM Plex Mono";min-width:3ch;text-align:center}
 .res{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto}
 .r{display:flex;justify-content:space-between;gap:8px;text-align:left;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--s);font:inherit;color:inherit;width:100%}
@@ -28,28 +28,35 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .ln{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px dashed var(--line)}.ln b{font-family:"IBM Plex Mono"}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600}
 [hidden]{display:none!important}
+.chip{border:1px solid var(--line);background:var(--s);font:600 13px 'IBM Plex Mono',monospace;padding:6px 10px;border-radius:8px;cursor:pointer}.r .mono{white-space:nowrap}.hsd{font-size:12px;color:var(--teal);font-weight:600}
+.rt{display:flex;align-items:center;gap:10px;flex-shrink:0}.del{border:1px solid var(--line);background:var(--s);color:var(--warn);font:600 12px inherit;font-family:inherit;padding:6px 10px;border-radius:8px;cursor:pointer}.del.arm{background:var(--warn);color:#fff;border-color:var(--warn)}
+.stack{display:flex;flex-direction:column;gap:6px;margin-top:10px}.stack .st{margin-top:4px}.stack .btn{margin-top:6px}
+details summary{cursor:pointer;padding:4px 0}
 </style></head><body>
-<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div></div></header>
+<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><button class="btn" id="logout" hidden style="padding:5px 10px;font-size:12px;white-space:nowrap">Đổi kho</button></div></div></header>
 <main class="w">
   <section id="loginBox" class="card">
     <div class="eb">Đăng nhập</div>
-    <div class="row"><select id="kho"><option value="hip">Kho Hip</option><option value="du">Kho Đù</option></select>
-      <input id="pin" inputmode="numeric" placeholder="Mã PIN" style="width:110px"><input id="who" placeholder="Tên người đếm" style="flex:1"></div>
-    <button class="btn p" id="loginBtn">Vào kho</button><div class="st" id="lst"></div>
+    <div class="stack" style="margin-top:0">
+      <label class="st">Kho</label><select id="kho"><option value="hip">Kho Hip</option><option value="du">Kho Đù</option></select>
+      <label class="st">Mã PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="4 số">
+      <label class="st">Tên người đếm</label><input id="who" placeholder="vd: Hà">
+    <button class="btn p big" id="loginBtn">Vào kho</button></div><div class="st" id="lst"></div>
   </section>
   <section id="app" hidden>
     <div class="card">
       <div class="row"><label class="st" style="margin:0">Đợt ngày</label><input type="date" id="day"></div>
       <label class="btn p big">Chụp mã vạch<input type="file" id="photo" accept="image/*" capture="environment"></label>
+      <label class="btn t big">Chụp tên sản phẩm<input type="file" id="photoName" accept="image/*" capture="environment"></label>
       <form class="row" id="cf"><input id="code" inputmode="numeric" placeholder="Nhập hoặc quét mã vạch" style="flex:1;font-family:'IBM Plex Mono'"><button class="btn">Tìm</button></form>
       <button class="btn t" id="byName">Hàng không có mã vạch? Tìm theo tên</button>
-      <div class="st" id="st">Chụp rõ mã vạch, hoặc dùng máy quét Bluetooth vào ô trên.</div>
+      <div class="st" id="st">Chụp mã vạch, hoặc chụp mặt trước hộp (thấy rõ tên hãng, tên sản phẩm, dung tích).</div>
       <div id="cur"></div>
     </div>
     <div class="card"><div class="row" style="justify-content:space-between"><div class="eb" id="sumT">Đợt kiểm</div><button class="btn" id="refresh">Làm mới</button></div><div id="sum"><div class="st">Chưa có món nào trong đợt này.</div></div></div>
   </section>
 </main>
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" hidden></div><datalist id="brandList"></datalist>
 <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script>
 const $=s=>document.querySelector(s);
@@ -68,18 +75,41 @@ $('#loginBtn').onclick=async()=>{
   S.kho=$('#kho').value;S.pin=$('#pin').value.trim();S.who=$('#who').value.trim();
   if(!S.who){$('#lst').textContent='Nhập tên người đếm.';return}
   $('#lst').textContent='Đang tải danh mục…';
-  try{ const d=await run('getCatalog',S.kho,S.pin); S.cat=d.cat.map(c=>{c.f=fold(c.join(' '));c.fb=fold(c[2]);return c}); S.by={};S.cat.forEach(c=>S.by[c[0]]=c); S.bc=d.bc;
+  try{ const d=await run('getCatalog',S.kho,S.pin); S.cat=d.cat.map(c=>{c.f=fold(c.join(' '));c.fb=fold(c[2]);return c}); S.by={};S.cat.forEach(c=>S.by[c[0]]=c); S.bc=d.bc; setBrands(S.cat.map(c=>c[2]).concat(Object.values(S.bc).map(v=>v[2])));
     LS.s('kho',S.kho);LS.s('pin',S.pin);LS.s('who',S.who);
-    $('#loginBox').hidden=true;$('#app').hidden=false;$('#hdr').textContent=($('#kho').selectedOptions[0].text)+' · '+S.who+' · '+S.cat.length+' mã hàng';
+    $('#loginBox').hidden=true;$('#app').hidden=false;$('#logout').hidden=false;$('#hdr').textContent=($('#kho').selectedOptions[0].text)+' · '+S.who+' · '+S.cat.length+' mã hàng';
     loadSum();
   }catch(e){$('#lst').textContent=e.message||'Không vào được kho.'}
 };
+$('#logout').onclick=()=>{S.cur=null;draw();$('#app').hidden=true;$('#logout').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
 $('#day').onchange=e=>{S.day=e.target.value||today();loadSum()};
 $('#refresh').onclick=loadSum;
 
 function search(q){const t=fold(q).split(/\s+/).filter(Boolean);if(!t.length)return[];const o=[];
   for(const c of S.cat){let s=0;for(const w of t){if(c.f.includes(w))s+=c.fb.includes(w)?2:1;else{s=-1;break}}if(s>0)o.push([s,c])}
   return o.sort((a,b)=>b[0]-a[0]).slice(0,25).map(x=>x[1])}
+
+function setBrands(a){S.brands=[...new Set(a.map(x=>String(x||'').trim().toUpperCase()).filter(Boolean))].sort().map(n=>({n,f:nf(n)}));$('#brandList').innerHTML=S.brands.map(b=>`<option value="${esc(b.n)}">`).join('')}
+const nf=s=>' '+fold(s).replace(/[^a-z0-9.]+/g,' ').trim()+' ';
+const VOL=/(\d+(?:[.,]\d+)?)\s*(fl\.?\s?oz|ml|oz|g)(?![a-z])/i;
+const STOP=new Set(['the','and','for','with','new','net','wt','made','usa','www','com']);
+let tessP=null;
+const loadTess=()=>tessP||(tessP=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';sc.onload=()=>ok(window.Tesseract);sc.onerror=()=>{tessP=null;no(new Error('Không tải được bộ đọc chữ, kiểm tra mạng.'))};document.head.appendChild(sc)}));
+async function ocr(file){const T=await loadTess();const bmp=await createImageBitmap(file);const k=Math.min(1,1800/Math.max(bmp.width,bmp.height));
+  const cv=document.createElement('canvas');cv.width=bmp.width*k;cv.height=bmp.height*k;const x=cv.getContext('2d');x.filter='grayscale(1) contrast(1.3)';x.drawImage(bmp,0,0,cv.width,cv.height);
+  const r=await T.recognize(cv,'eng',{logger:m=>{if(m.status==='recognizing text')st('Đang đọc chữ… '+Math.round(m.progress*100)+'%')}});return r.data.text||''}
+function parseOcr(t){const ft=nf(t);let brand='';for(const b of S.brands||[])if(b.f.length>4&&ft.includes(b.f)&&b.f.length>nf(brand).length)brand=b.n;
+  const vm=t.match(VOL);const vol=vm?vm[1].replace(',','.')+vm[2].toLowerCase().replace(/[\s.]/g,''):'';
+  const k=w=>fold(w).replace(/[^a-z0-9]/g,''),bw=new Set([k(brand),...fold(brand).split(/[^a-z0-9]+/)].filter(Boolean));
+  let lines=t.split('\n').map(l=>l.replace(VOL,' ').replace(/[^A-Za-z0-9À-ỹ '&+-]/g,' ').split(/\s+/).filter(w=>w&&!bw.has(k(w))).join(' ').trim()).filter(l=>/[A-Za-z]{3}/.test(l));
+  let L=lines.filter(l=>l.replace(/[^A-Za-z]/g,'').length>=4&&!/\b(since|dermatologist|made in|net wt|paris|new york|london)\b/i.test(l));
+  if(!brand&&L.length>1&&L[0].split(' ').length<=3){brand=L[0].toUpperCase();L=L.slice(1)}
+  let nm=L.slice(0,2).join(' ');if(nm.length>45)nm=nm.slice(0,45).replace(/\s+\S*$/,'');
+  return{brand,vol,name:(nm+(vol?' '+vol:'')).trim()}}
+function ocrSearch(t,brand,vol){const ws=[...new Set(fold(t).split(/[^a-z0-9]+/).filter(w=>w.length>=3&&!STOP.has(w)))];const bf=fold(brand),vf=fold(vol);const o=[];
+  for(const c of S.cat){let s=0;for(const w of ws)if(c.f.includes(w))s+=Math.min(w.length,8);if(bf)s+=c.fb===bf?12:-4;if(vf&&c.f.replace(/\s/g,'').includes(vf))s+=6;if(s>=10)o.push([s,c])}
+  return o.sort((a,b)=>b[0]-a[0]).slice(0,15).map(x=>x[1])}
+const rowsHtml=a=>a.map(x=>`<button class="r" data-h="${esc(x[0])}"><span><span class="b">${esc(x[2])}</span><br>${esc(x[1])}</span><span class="mono">${esc(x[0])}</span></button>`).join('');
 
 async function decode(file){const bmp=await createImageBitmap(file);const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
   const cv=document.createElement('canvas');cv.width=bmp.width*k;cv.height=bmp.height*k;cv.getContext('2d').drawImage(bmp,0,0,cv.width,cv.height);
@@ -90,6 +120,11 @@ async function decode(file){const bmp=await createImageBitmap(file);const k=Math
 
 $('#photo').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc mã vạch…');
   try{const r=await decode(f);if(r)lookup(r);else st('Chưa đọc được mã. Chụp gần, đủ sáng, mã vạch nằm ngang.',true)}catch(x){st('Không mở được ảnh.',true)}};
+$('#photoName').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang tải bộ đọc chữ (lần đầu hơi lâu)…');
+  try{const t=await ocr(f);const p=parseOcr(t);const res=ocrSearch(t,p.brand,p.vol);
+    S.cur={bc:S.cur&&!S.cur.it?S.cur.bc:null,it:null,ocr:Object.assign(p,{res})};
+    st(res.length?'Đọc được'+(p.brand||p.vol?': '+[p.brand,p.vol].filter(Boolean).join(' · '):'')+'. Chọn đúng sản phẩm bên dưới.':'Chưa khớp sản phẩm nào. Sửa tên rồi bấm Thêm hàng mới, hoặc chụp lại gần hơn.',!res.length);draw()}
+  catch(x){st(x.message||'Không đọc được ảnh.',true)}};
 $('#cf').onsubmit=e=>{e.preventDefault();lookup($('#code').value)};
 $('#byName').onclick=()=>{S.cur={bc:null,it:null};draw()};
 
@@ -99,28 +134,57 @@ function lookup(raw){const bc=String(raw||'').replace(/\s+/g,'');if(!bc)return;$
 
 function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return}
   if(c.it){box.innerHTML=`<div class="card hit"><div class="eb">${esc(c.it.brand||'')}${c.bc?' · <span class="mono">'+esc(c.bc)+'</span>':''}</div><div><b>${esc(c.it.name)}</b></div><div class="mono">${esc(c.it.hh||'Hàng mới')}</div>
-    <div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto">Đổi sản phẩm</button></div></div>`;
-    $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>add(c.it,1);$('#x').onclick=()=>{S.cur={bc:c.bc,it:null};draw()};return}
+    <div class="st">Số lượng vừa đếm cho món này — bấm + / − nếu đếm nhiều cái</div><div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
+    <div class="st" style="margin-top:4px">Batch code (in/dập dưới đáy hộp)${c.batch?' · đã lưu: <b class="mono">'+esc(c.batch)+'</b>':''}</div>
+    <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono';text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><label class="btn">Chụp<input type="file" id="btPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="btSave">Lưu</button></div>
+    <div class="row" id="btChips">${(c.btChips||[]).map(t=>`<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`;
+    $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>add(c.it,1);$('#x').onclick=()=>{S.cur={bc:c.bc,it:null};draw()};
+    $('#bt').oninput=e=>c.btDraft=e.target.value;
+    $('#btChips').onclick=e=>{const t=e.target.closest('.chip');if(t){$('#bt').value=c.btDraft=t.dataset.t}};
+    $('#btSave').onclick=()=>{const v=$('#bt').value.trim().toUpperCase().replace(/\s+/g,'');if(!v)return st('Nhập batch code trước.',true);
+      c.batch=v;c.btDraft=undefined;c.btChips=[];draw();toast('Đã lưu batch '+v);
+      busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,c.it.hh,c.it.name,c.it.brand,0,c.bc||'',S.who,v).then(renderSum).catch(e=>st('Chưa lưu được batch: '+e.message,true)))};
+    $('#btPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc batch code…');
+      try{const t=await ocr(f);const toks=[...new Set((t.toUpperCase().match(/[A-Z0-9]{2,12}/g)||[]).filter(x=>/\d/.test(x)&&x.length>=3))].slice(0,8);
+        c.btChips=toks;if(toks[0]&&!c.btDraft)c.btDraft=toks[0];st(toks.length?'Chọn đúng batch code bên dưới (hoặc sửa tay) rồi bấm Lưu.':'Chưa đọc được batch. Chụp gần, đủ sáng, hoặc gõ tay.',!toks.length);draw()}
+      catch(x){st(x.message||'Không đọc được ảnh.',true)}};return}
   box.innerHTML=`<div class="card new"><div class="eb">${c.bc?'Mã vạch mới <span class="mono">'+esc(c.bc)+'</span> — chọn sản phẩm':'Tìm theo tên hoặc hãng'}</div>
-    <input id="sq" placeholder="vd: kiehls ultra 50ml"><div class="res" id="rs"></div>
-    <details><summary class="st">Không có trong danh mục? Thêm hàng mới</summary><form class="row" id="nf" style="margin-top:8px"><input id="nb" placeholder="Hãng" required style="flex:1"><input id="nn" placeholder="Tên, dung tích" required style="flex:2"><button class="btn p">Thêm và đếm 1</button></form></details>
+    <input id="sq" placeholder="vd: clinique dramatically 50ml"><div class="res" id="rs">${c.ocr?rowsHtml(c.ocr.res):''}</div>
+    <details${c.ocr&&!c.ocr.res.length?' open':''}><summary class="st">Không có trong danh mục? Thêm hàng mới</summary><form id="nf" class="stack">
+      <label class="st">Hãng — chọn hãng có sẵn hoặc gõ hãng mới</label>
+      <input id="nb" list="brandList" autocomplete="off" placeholder="Gõ để tìm hãng, vd: CLINIQUE" required style="text-transform:uppercase" value="${esc(c.ocr?.brand||'')}"><div class="st" id="nbHint"></div>
+      <label class="st">Tên sản phẩm + dung tích</label>
+      <input id="nn" placeholder="vd: Dramatically 50ml" required value="${esc(c.ocr?.name||'')}">
+      <div class="st" id="nPrev"></div>
+      <button class="btn p">Thêm và đếm 1</button></form></details>
     <button class="btn" id="cx">Huỷ</button></div>`;
-  const q=$('#sq'),rs=$('#rs');q.oninput=()=>{rs.innerHTML=search(q.value).map(x=>`<button class="r" data-h="${esc(x[0])}"><span><span class="b">${esc(x[2])}</span><br>${esc(x[1])}</span><span class="mono">${esc(x[0])}</span></button>`).join('')};q.focus();
+  const q=$('#sq'),rs=$('#rs');q.oninput=()=>{rs.innerHTML=rowsHtml(search(q.value))};if(!c.ocr)q.focus();
   rs.onclick=e=>{const b=e.target.closest('[data-h]');if(!b)return;const x=S.by[b.dataset.h];choose({hh:x[0],name:x[1],brand:x[2]})};
-  $('#nf').onsubmit=e=>{e.preventDefault();choose({hh:'',name:$('#nn').value.trim(),brand:$('#nb').value.trim().toUpperCase()})};
+  $('#nf').onsubmit=e=>{e.preventDefault();const b=$('#nb').value.trim().replace(/\s+/g,' ').toUpperCase();let n=$('#nn').value.trim().replace(/\s+/g,' ');
+    if(fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();if(!S.brands.some(x=>x.n===b))setBrands(S.brands.map(x=>x.n).concat(b));choose({hh:'',name:(b+' '+n).trim(),brand:b})};
+  const nb=$('#nb'),nn=$('#nn'),prev=()=>{const b=nb.value.trim().toUpperCase(),known=!b||S.brands.some(x=>x.n===b);
+    $('#nbHint').textContent=known?'':'Hãng mới (chưa có trong danh sách)';
+    let n=nn.value.trim();if(b&&fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();$('#nPrev').textContent=b||n?'Sẽ lưu thành: '+(b+' '+n).trim():''};
+  nb.oninput=prev;nn.oninput=prev;prev();
   $('#cx').onclick=()=>{S.cur=null;draw()}}
 
 async function choose(it){const bc=S.cur?.bc;S.cur={bc,it};if(bc){S.bc[bc]=[it.hh,it.name,it.brand];run('saveBarcode',S.kho,S.pin,bc,it.hh,it.name,it.brand,S.who).catch(e=>st('Chưa lưu được mã vạch: '+e.message,true))}add(it,1)}
 
 let busy=Promise.resolve();
 function add(it,d){S.cur.n=(S.cur.n||0)+d;draw();toast((d>0?'+':'')+d+' · '+it.name.slice(0,40));
-  busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,it.hh,it.name,it.brand,d,S.cur?.bc||'',S.who).then(renderSum).catch(e=>st('Chưa ghi được: '+e.message,true)))}
+  busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,it.hh,it.name,it.brand,d,S.cur?.bc||'',S.who,S.cur?.batch||'').then(renderSum).catch(e=>st('Chưa ghi được: '+e.message,true)))}
 
 function loadSum(){$('#sumT').textContent='Đợt kiểm '+S.day.split('-').reverse().join('/');run('getSummary',S.kho,S.pin,S.day).then(renderSum).catch(e=>st(e.message,true))}
-function renderSum(rows){const el=$('#sum');if(!rows||!rows.length){el.innerHTML='<div class="st">Chưa có món nào trong đợt này. Chụp mã vạch hoặc tìm theo tên để bắt đầu.</div>';return}
+function renderSum(rows){const el=$('#sum');S.rows=rows||[];if(!rows||!rows.length){el.innerHTML='<div class="st">Chưa có món nào trong đợt này. Chụp mã vạch hoặc tìm theo tên để bắt đầu.</div>';return}
   const g={};rows.forEach(r=>{(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r)});let tot=0;rows.forEach(r=>tot+=r[3]);
   let h=`<div class="st">${rows.length} mã hàng · ${tot} sản phẩm</div>`;
   for(const b of Object.keys(g).sort()){h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${g[b].reduce((s,r)=>s+r[3],0)}</span></h3>`;
-    for(const r of g[b].sort((a,c)=>a[1].localeCompare(c[1])))h+=`<div class="ln"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · ${esc(r[4])}</span></span><b>${r[3]}</b></div>`;h+='</div>'}
+    for(const r of g[b].sort((a,c)=>a[1].localeCompare(c[1])))h+=`<div class="ln"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · ${esc(r[4])}</span>${r[5]?`<br><span class="mono">Batch: ${esc(r[5])}</span> <a class="hsd" href="https://checkcosmetic.net/" target="_blank" rel="noopener" data-c="${esc(r[5].split(', ')[0])}">Tra HSD</a>`:''}</span><span class="rt"><b>${r[3]}</b><button class="del" data-i="${S.rows.indexOf(r)}">Xoá</button></span></div>`;h+='</div>'}
   el.innerHTML=h}
+$('#sum').onclick=async e=>{const h=e.target.closest('.hsd');if(h){try{navigator.clipboard.writeText(h.dataset.c)}catch(x){}toast('Đã copy batch '+h.dataset.c+' — dán vào trang tra cứu');return}
+  const b=e.target.closest('.del');if(!b)return;
+  if(!b.classList.contains('arm')){$('#sum').querySelectorAll('.del.arm').forEach(x=>{x.classList.remove('arm');x.textContent='Xoá'});b.classList.add('arm');b.textContent='Chắc chắn xoá?';return}
+  const r=S.rows[+b.dataset.i];if(!r)return;b.disabled=true;b.textContent='Đang xoá…';
+  try{const rows=await run('addCount',S.kho,S.pin,S.day,r[0],r[1],r[2],-r[3],'',S.who);renderSum(rows);toast('Đã xoá · '+r[1].slice(0,40));if(S.cur&&S.cur.it&&S.cur.it.name===r[1]){S.cur=null;draw()}}
+  catch(x){b.disabled=false;b.textContent='Xoá';st('Chưa xoá được: '+x.message,true)}};
 </script></body></html>
