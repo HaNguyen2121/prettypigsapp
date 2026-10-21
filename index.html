@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Kiểm kho Pretty Pigs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=IBM+Plex+Mono:wght@500;700&display=swap">
+<style>
+:root{--bg:#fbf7f8;--s:#fff;--sunk:#f3ecee;--line:#e7dde0;--ink:#1f2a2e;--mut:#6a7276;--acc:#c2416b;--teal:#1f6f73;--tealS:#e2f1f1;--warn:#a15c00;--warnS:#fff1dc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Be Vietnam Pro",system-ui,sans-serif}
+.w{max-width:640px;margin:0 auto;padding:0 16px 40px}
+header{position:sticky;top:0;background:var(--s);border-bottom:1px solid var(--line);z-index:5}
+header .w{padding-block:12px;display:flex;flex-direction:column;gap:8px}
+h1{margin:0;font-size:19px;font-weight:800}h1 span{color:var(--acc)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-width:0}
+.btn{border:1px solid var(--line);background:var(--s);color:var(--ink);font:600 14px inherit;font-family:inherit;padding:10px 14px;border-radius:10px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}.btn.t{background:var(--tealS);border-color:transparent;color:var(--teal)}
+.btn input[type=file]{position:absolute;inset:0;opacity:0}
+.big{padding:16px;font-size:16px;width:100%}
+.card{background:var(--s);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.hit{border-color:var(--teal);background:var(--tealS)}.new{border-color:var(--warn);background:var(--warnS)}
+.st{font-size:13px;color:var(--mut);min-height:1.2em}.st.e{color:var(--warn)}
+.eb{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.mono{font-family:"IBM Plex Mono",monospace;font-size:12px}
+.qty{display:flex;gap:10px;align-items:center}.qty button{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--s);font-size:20px}
+.qty b{font:700 22px "IBM Plex Mono";min-width:3ch;text-align:center}
+.res{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto}
+.r{display:flex;justify-content:space-between;gap:8px;text-align:left;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--s);font:inherit;color:inherit;width:100%}
+.r .b{font-size:11px;font-weight:700;color:var(--teal)}
+.grp h3{margin:14px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);display:flex;justify-content:space-between}
+.ln{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px dashed var(--line)}.ln b{font-family:"IBM Plex Mono"}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600}
+[hidden]{display:none!important}
+</style></head><body>
+<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div></div></header>
+<main class="w">
+  <section id="loginBox" class="card">
+    <div class="eb">Đăng nhập</div>
+    <div class="row"><select id="kho"><option value="hip">Kho Hip</option><option value="du">Kho Đù</option></select>
+      <input id="pin" inputmode="numeric" placeholder="Mã PIN" style="width:110px"><input id="who" placeholder="Tên người đếm" style="flex:1"></div>
+    <button class="btn p" id="loginBtn">Vào kho</button><div class="st" id="lst"></div>
+  </section>
+  <section id="app" hidden>
+    <div class="card">
+      <div class="row"><label class="st" style="margin:0">Đợt ngày</label><input type="date" id="day"></div>
+      <label class="btn p big">Chụp mã vạch<input type="file" id="photo" accept="image/*" capture="environment"></label>
+      <form class="row" id="cf"><input id="code" inputmode="numeric" placeholder="Nhập hoặc quét mã vạch" style="flex:1;font-family:'IBM Plex Mono'"><button class="btn">Tìm</button></form>
+      <button class="btn t" id="byName">Hàng không có mã vạch? Tìm theo tên</button>
+      <div class="st" id="st">Chụp rõ mã vạch, hoặc dùng máy quét Bluetooth vào ô trên.</div>
+      <div id="cur"></div>
+    </div>
+    <div class="card"><div class="row" style="justify-content:space-between"><div class="eb" id="sumT">Đợt kiểm</div><button class="btn" id="refresh">Làm mới</button></div><div id="sum"><div class="st">Chưa có món nào trong đợt này.</div></div></div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fold=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
+const LS={g(k){try{return localStorage.getItem(k)}catch(e){return null}},s(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+let S={kho:LS.g('kho')||'hip',pin:LS.g('pin')||'',who:LS.g('who')||'',day:today(),cat:[],by:{},bc:{},cur:null};
+const API='https://script.google.com/macros/s/AKfycbyHm--q-8fsDMc4ZSg67ZOfUiMyqWAwLKVuCvZ_XPuH_2er2RLI7em7FsbeFYbdKTtYnA/exec';
+const run=async(fn,...a)=>{let last;for(let i=0;i<3;i++){try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:a})});const j=await r.json();if(!j.ok)throw Object.assign(new Error(j.error),{app:true});return j.data}catch(e){if(e.app)throw e;last=e;await new Promise(z=>setTimeout(z,800*(i+1)))}}throw new Error('Mất kết nối, thử lại nhé.')};
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,1500)}
+function st(t,e){$('#st').textContent=t;$('#st').classList.toggle('e',!!e)}
+$('#kho').value=S.kho;$('#pin').value=S.pin;$('#who').value=S.who;$('#day').value=S.day;
+
+$('#loginBtn').onclick=async()=>{
+  S.kho=$('#kho').value;S.pin=$('#pin').value.trim();S.who=$('#who').value.trim();
+  if(!S.who){$('#lst').textContent='Nhập tên người đếm.';return}
+  $('#lst').textContent='Đang tải danh mục…';
+  try{ const d=await run('getCatalog',S.kho,S.pin); S.cat=d.cat.map(c=>{c.f=fold(c.join(' '));c.fb=fold(c[2]);return c}); S.by={};S.cat.forEach(c=>S.by[c[0]]=c); S.bc=d.bc;
+    LS.s('kho',S.kho);LS.s('pin',S.pin);LS.s('who',S.who);
+    $('#loginBox').hidden=true;$('#app').hidden=false;$('#hdr').textContent=($('#kho').selectedOptions[0].text)+' · '+S.who+' · '+S.cat.length+' mã hàng';
+    loadSum();
+  }catch(e){$('#lst').textContent=e.message||'Không vào được kho.'}
+};
+$('#day').onchange=e=>{S.day=e.target.value||today();loadSum()};
+$('#refresh').onclick=loadSum;
+
+function search(q){const t=fold(q).split(/\s+/).filter(Boolean);if(!t.length)return[];const o=[];
+  for(const c of S.cat){let s=0;for(const w of t){if(c.f.includes(w))s+=c.fb.includes(w)?2:1;else{s=-1;break}}if(s>0)o.push([s,c])}
+  return o.sort((a,b)=>b[0]-a[0]).slice(0,25).map(x=>x[1])}
+
+async function decode(file){const bmp=await createImageBitmap(file);const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+  const cv=document.createElement('canvas');cv.width=bmp.width*k;cv.height=bmp.height*k;cv.getContext('2d').drawImage(bmp,0,0,cv.width,cv.height);
+  if('BarcodeDetector'in window){try{const r=await new BarcodeDetector().detect(cv);if(r[0])return r[0].rawValue}catch(e){}}
+  const Z=window.ZXing,h=new Map();h.set(Z.DecodeHintType.TRY_HARDER,true);const rd=new Z.MultiFormatReader();rd.setHints(h);
+  const tr=c=>{try{return rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c)))).getText()}catch(e){return null}};
+  let r=tr(cv);if(r)return r;const rc=document.createElement('canvas');rc.width=cv.height;rc.height=cv.width;const x=rc.getContext('2d');x.translate(rc.width/2,rc.height/2);x.rotate(Math.PI/2);x.drawImage(cv,-cv.width/2,-cv.height/2);return tr(rc)}
+
+$('#photo').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc mã vạch…');
+  try{const r=await decode(f);if(r)lookup(r);else st('Chưa đọc được mã. Chụp gần, đủ sáng, mã vạch nằm ngang.',true)}catch(x){st('Không mở được ảnh.',true)}};
+$('#cf').onsubmit=e=>{e.preventDefault();lookup($('#code').value)};
+$('#byName').onclick=()=>{S.cur={bc:null,it:null};draw()};
+
+function lookup(raw){const bc=String(raw||'').replace(/\s+/g,'');if(!bc)return;$('#code').value='';
+  const m=S.bc[bc];if(m){const it=S.by[m[0]]?{hh:m[0],name:S.by[m[0]][1],brand:S.by[m[0]][2]}:{hh:m[0],name:m[1],brand:m[2]};S.cur={bc,it};st('Đã nhận mã '+bc);add(it,1)}
+  else{S.cur={bc,it:null};st('Mã '+bc+' chưa có trong sổ. Chọn sản phẩm một lần, lần sau quét là tự nhận.');draw()}}
+
+function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return}
+  if(c.it){box.innerHTML=`<div class="card hit"><div class="eb">${esc(c.it.brand||'')}${c.bc?' · <span class="mono">'+esc(c.bc)+'</span>':''}</div><div><b>${esc(c.it.name)}</b></div><div class="mono">${esc(c.it.hh||'Hàng mới')}</div>
+    <div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto">Đổi sản phẩm</button></div></div>`;
+    $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>add(c.it,1);$('#x').onclick=()=>{S.cur={bc:c.bc,it:null};draw()};return}
+  box.innerHTML=`<div class="card new"><div class="eb">${c.bc?'Mã vạch mới <span class="mono">'+esc(c.bc)+'</span> — chọn sản phẩm':'Tìm theo tên hoặc hãng'}</div>
+    <input id="sq" placeholder="vd: kiehls ultra 50ml"><div class="res" id="rs"></div>
+    <details><summary class="st">Không có trong danh mục? Thêm hàng mới</summary><form class="row" id="nf" style="margin-top:8px"><input id="nb" placeholder="Hãng" required style="flex:1"><input id="nn" placeholder="Tên, dung tích" required style="flex:2"><button class="btn p">Thêm và đếm 1</button></form></details>
+    <button class="btn" id="cx">Huỷ</button></div>`;
+  const q=$('#sq'),rs=$('#rs');q.oninput=()=>{rs.innerHTML=search(q.value).map(x=>`<button class="r" data-h="${esc(x[0])}"><span><span class="b">${esc(x[2])}</span><br>${esc(x[1])}</span><span class="mono">${esc(x[0])}</span></button>`).join('')};q.focus();
+  rs.onclick=e=>{const b=e.target.closest('[data-h]');if(!b)return;const x=S.by[b.dataset.h];choose({hh:x[0],name:x[1],brand:x[2]})};
+  $('#nf').onsubmit=e=>{e.preventDefault();choose({hh:'',name:$('#nn').value.trim(),brand:$('#nb').value.trim().toUpperCase()})};
+  $('#cx').onclick=()=>{S.cur=null;draw()}}
+
+async function choose(it){const bc=S.cur?.bc;S.cur={bc,it};if(bc){S.bc[bc]=[it.hh,it.name,it.brand];run('saveBarcode',S.kho,S.pin,bc,it.hh,it.name,it.brand,S.who).catch(e=>st('Chưa lưu được mã vạch: '+e.message,true))}add(it,1)}
+
+let busy=Promise.resolve();
+function add(it,d){S.cur.n=(S.cur.n||0)+d;draw();toast((d>0?'+':'')+d+' · '+it.name.slice(0,40));
+  busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,it.hh,it.name,it.brand,d,S.cur?.bc||'',S.who).then(renderSum).catch(e=>st('Chưa ghi được: '+e.message,true)))}
+
+function loadSum(){$('#sumT').textContent='Đợt kiểm '+S.day.split('-').reverse().join('/');run('getSummary',S.kho,S.pin,S.day).then(renderSum).catch(e=>st(e.message,true))}
+function renderSum(rows){const el=$('#sum');if(!rows||!rows.length){el.innerHTML='<div class="st">Chưa có món nào trong đợt này. Chụp mã vạch hoặc tìm theo tên để bắt đầu.</div>';return}
+  const g={};rows.forEach(r=>{(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r)});let tot=0;rows.forEach(r=>tot+=r[3]);
+  let h=`<div class="st">${rows.length} mã hàng · ${tot} sản phẩm</div>`;
+  for(const b of Object.keys(g).sort()){h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${g[b].reduce((s,r)=>s+r[3],0)}</span></h3>`;
+    for(const r of g[b].sort((a,c)=>a[1].localeCompare(c[1])))h+=`<div class="ln"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · ${esc(r[4])}</span></span><b>${r[3]}</b></div>`;h+='</div>'}
+  el.innerHTML=h}
+</script></body></html>
