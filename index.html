@@ -42,8 +42,9 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .rt{display:flex;align-items:center;gap:10px;flex-shrink:0}.del{border:1px solid var(--line);background:var(--s);color:var(--warn);font:600 12px inherit;font-family:inherit;padding:6px 10px;border-radius:8px;cursor:pointer}.del.arm{background:var(--warn);color:#fff;border-color:var(--warn)}
 .stack{display:flex;flex-direction:column;gap:6px;margin-top:10px}.stack .st{margin-top:4px}.stack .btn{margin-top:6px}
 details summary{cursor:pointer;padding:4px 0}
+.po{border-top:1px solid var(--line);padding:10px 0}.po .row{margin-top:6px}.po .btn{padding:6px 10px;font-size:13px}
 </style></head><body>
-<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
+<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm / Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
 <main class="w">
   <section id="loginBox" class="card">
     <div class="eb">Đăng nhập</div>
@@ -56,10 +57,13 @@ details summary{cursor:pointer;padding:4px 0}
   <section id="stock" hidden><div class="card">
     <div class="row" style="justify-content:space-between"><div class="eb">Tồn kho tổng (Hip + Đù)</div><button class="btn" id="skRefresh">Làm mới</button></div>
     <input id="skQ" placeholder="Tìm tên, hãng hoặc mã HH"><div class="st" id="skInfo"></div><div id="skList"></div>
-    <div class="st">Cách tính: mỗi kho lấy số của lần kiểm gần nhất có đếm món đó (ngày ghi dưới tên).</div></div></section>
+    <div class="st">Cách tính: mỗi kho lấy số của lần kiểm gần nhất có đếm món đó (ngày ghi dưới tên), rồi cộng nhập đợt / hàng hoàn / chuyển đến và trừ hàng bán / chuyển đi sau ngày đó (số trong ngoặc).</div></div>
+    <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đơn đã gửi, chưa trừ kho</div><button class="btn" id="poRefresh">Làm mới</button></div>
+    <div class="st" id="poInfo">Đơn trong sổ đơn hàng có đơn vị vận chuyển — bấm kho đã gửi để trừ tồn. "Không từ kho" cho đơn đặt riêng.</div><div id="poList"></div></div></section>
   <section id="app" hidden>
     <div class="card">
-      <div class="row"><label class="st" style="margin:0">Đợt ngày</label><input type="date" id="day"></div>
+      <div class="row"><label class="st" style="margin:0">Việc</label><select id="mode" style="flex:1"><option value="count">Kiểm kho (đếm tồn)</option><option value="in">Nhập đợt hàng về</option><option value="move">Chuyển sang kho kia</option><option value="ret">Nhận hàng hoàn</option></select></div>
+      <div class="row"><label class="st" style="margin:0">Ngày</label><input type="date" id="day"></div><div class="st" id="modeHint"></div>
       <button class="btn p big" id="liveBtn">Quét liên tục bằng camera</button>
       <div id="live" hidden><div class="vwrap"><video id="lvVideo" playsinline muted></video><div class="guide"></div></div><div class="st" id="lvMsg"></div></div>
       <div class="row two"><label class="btn">Chụp ảnh mã vạch<input type="file" id="photo" accept="image/*" capture="environment"></label>
@@ -94,11 +98,15 @@ $('#loginBtn').onclick=async()=>{
   try{ const d=await run('getCatalog',S.kho,S.pin); S.cat=d.cat.map(c=>{c.f=fold(c.join(' '));c.fb=fold(c[2]);return c}); S.by={};S.cat.forEach(c=>S.by[c[0]]=c); S.bc=d.bc; setBrands(S.cat.map(c=>c[2]).concat(Object.values(S.bc).map(v=>v[2])));
     LS.s('kho',S.kho);LS.s('pin',S.pin);LS.s('who',S.who);
     $('#loginBox').hidden=true;$('#app').hidden=false;$('#tabs').hidden=false;showStock(false);$('#hdr').textContent=($('#kho').selectedOptions[0].text)+' · '+S.who+' · '+S.cat.length+' mã hàng';
-    loadSum();
+    setMode('count');
   }catch(e){$('#lst').textContent=e.message||'Không vào được kho.'}
 };
 $('#logout').onclick=()=>{stopLive();showStock(false);S.cur=null;draw();$('#app').hidden=true;$('#stock').hidden=true;$('#tabs').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
 $('#day').onchange=e=>{S.day=e.target.value||today();loadSum()};
+S.mode='count';const MODE={count:['Đợt kiểm','Đếm toàn bộ hàng đang có trong kho. Số này thay cho tồn cũ.'],in:['Nhập đợt','Hàng mới về kho này — cộng thêm vào tồn.'],move:['Chuyển kho','Hàng gửi từ kho này sang kho kia — trừ ở đây, cộng bên kia.'],ret:['Hàng hoàn','Hàng khách trả về kho này — cộng thêm vào tồn.']};
+const D=()=>S.mode==='count'?S.day:S.mode+':'+S.day;
+function setMode(m){S.mode=m;$('#mode').value=m;$('#modeHint').textContent=MODE[m][1]+(m==='move'?' (sang '+(S.kho==='hip'?'Kho Đù':'Kho Hip')+')':'');S.cur=null;draw();S.openKey=null;loadSum()}
+$('#mode').onchange=e=>setMode(e.target.value);
 $('#refresh').onclick=loadSum;
 
 function search(q){const t=fold(q).split(/\s+/).filter(Boolean);if(!t.length)return[];const o=[];
@@ -208,7 +216,15 @@ function showStock(on){$('#stock').hidden=!on;$('#app').hidden=on;$('#tabCount')
 $('#tabCount').onclick=()=>showStock(false);$('#tabStock').onclick=()=>showStock(true);$('#skRefresh').onclick=()=>loadStock();
 $('#skQ').oninput=()=>renderStock();
 const dshort=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'—';
-async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';try{S.stock=await run('getStock',S.kho,S.pin);renderStock()}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message}}
+async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';loadPO();try{S.stock=await run('getStock',S.kho,S.pin);renderStock()}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message}}
+async function loadPO(){$('#poList').innerHTML='<div class="st">Đang tải đơn…</div>';try{renderPO(await run('getPendingOrders',S.kho,S.pin))}catch(e){$('#poList').innerHTML='<div class="st e">Chưa tải được: '+esc(e.message)+'</div>'}}
+function renderPO(rows){S.po=rows||[];const g={};S.po.forEach(r=>(g[r[2]]=g[r[2]]||[]).push(r));const ks=Object.keys(g).sort((a,b)=>g[b][0][1].localeCompare(g[a][0][1]));
+  $('#poList').innerHTML=ks.length?`<div class="st">${ks.length} đơn chưa trừ kho</div>`+ks.slice(0,60).map(k=>{const a=g[k];return `<div class="po"><div><b class="mono">${esc(k)}</b> · ${dshort(a[0][1])} · ${esc(a[0][3])}<span class="mono" style="color:var(--mut)"> · ${esc(a[0][8])}${a[0][9]&&a[0][9]!=='Done'?' '+esc(a[0][9]):''}</span></div>${a.map(r=>`<div class="st" style="color:var(--ink)">${r[7]} × ${esc(r[5])}${r[6]?' — '+esc(r[6]):''}</div>`).join('')}<div class="row"><button class="btn" data-o="${esc(k)}" data-to="hip">Gửi từ Hip</button><button class="btn" data-o="${esc(k)}" data-to="du">Gửi từ Đù</button><button class="btn t" data-o="${esc(k)}" data-to="skip">Không từ kho</button></div></div>`}).join('')+(ks.length>60?'<div class="st">Đang hiện 60 đơn mới nhất.</div>':''):'<div class="st">Không còn đơn nào chưa trừ kho.</div>'}
+$('#poRefresh').onclick=loadPO;
+$('#poList').onclick=async e=>{const b=e.target.closest('[data-o]');if(!b)return;const keys=S.po.filter(r=>r[2]===b.dataset.o).map(r=>r[0]);
+  b.closest('.po').querySelectorAll('button').forEach(x=>x.disabled=true);b.textContent='Đang ghi…';
+  try{renderPO(await run('assignOrder',S.kho,S.pin,keys,b.dataset.to,S.who));toast(b.dataset.to==='skip'?'Đã bỏ qua đơn '+b.dataset.o:'Đã trừ kho đơn '+b.dataset.o);S.stock=await run('getStock',S.kho,S.pin);renderStock()}
+  catch(x){toast('Chưa ghi được: '+x.message);loadPO()}};
 function renderStock(){const rows=S.stock||[];const q=fold($('#skQ').value).split(/\s+/).filter(Boolean);
   const f=rows.filter(r=>{const t=fold(r.join(' '));return q.every(w=>t.includes(w))});
   let th=0,td=0;f.forEach(r=>{th+=r[3];td+=r[5]});
@@ -216,7 +232,7 @@ function renderStock(){const rows=S.stock||[];const q=fold($('#skQ').value).spli
   const g={};f.forEach(r=>(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r));
   let h='<div class="sk skh"><span>Sản phẩm</span><span class="n">Hip</span><span class="n">Đù</span><span class="n">Tổng</span></div>',n=0;
   for(const b of Object.keys(g).sort()){if(n>400)break;const a=g[b];h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${a.reduce((s,r)=>s+r[3]+r[5],0)}</span></h3>`;
-    for(const r of a.sort((x,y)=>x[1].localeCompare(y[1]))){n++;h+=`<div class="sk"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · Hip ${dshort(r[4])} · Đù ${dshort(r[6])}${r[7]?'<br>Batch '+batchInfo(r[2],r[7]):''}</span></span><span class="n">${r[3]}</span><span class="n">${r[5]}</span><span class="n t">${r[3]+r[5]}</span></div>`}
+    for(const r of a.sort((x,y)=>x[1].localeCompare(y[1]))){n++;h+=`<div class="sk"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · Hip ${dshort(r[4])}${r[8]?' ('+(r[8]>0?'+':'')+r[8]+')':''} · Đù ${dshort(r[6])}${r[9]?' ('+(r[9]>0?'+':'')+r[9]+')':''}${r[7]?'<br>Batch '+batchInfo(r[2],r[7]):''}</span></span><span class="n">${r[3]}</span><span class="n">${r[5]}</span><span class="n t">${r[3]+r[5]}</span></div>`}
     h+='</div>'}
   if(n>400)h+='<div class="st">Đang hiện 400 dòng đầu — gõ ô tìm để lọc.</div>';
   $('#skList').innerHTML=f.length?h:'<div class="st">Chưa có dữ liệu tồn kho.</div>'}
@@ -230,7 +246,7 @@ function lookup(raw){const bc=String(raw||'').replace(/\s+/g,'');if(!bc)return;$
 
 function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return}
   if(c.it){box.innerHTML=`<div class="card hit"><div class="eb">${esc(c.it.brand||'')}${c.bc?' · <span class="mono">'+esc(c.bc)+'</span>':''}</div><div><b>${esc(c.it.name)}</b></div><div class="mono">${esc(c.it.hh||'Hàng mới')}</div>
-    <div class="tot">Tổng đã đếm trong đợt: <b id="tot">${totalOf(c.it)}</b></div><div class="st">Số vừa bấm cho món này — bấm + / − nếu đếm nhiều cái</div><div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
+    <div class="tot">Tổng ${S.mode==='count'?'đã đếm trong đợt':MODE[S.mode][0].toLowerCase()+' hôm nay'}: <b id="tot">${totalOf(c.it)}</b></div><div class="st">Số vừa bấm cho món này — bấm + / − nếu đếm nhiều cái</div><div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
     <div class="st" style="margin-top:4px">Batch code (in/dập dưới đáy hộp)${c.batch?' · đã lưu: <b class="mono">'+esc(c.batch)+'</b>':''}</div>
     <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono';text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><label class="btn">Chụp<input type="file" id="btPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="btSave">Lưu</button></div>
     <div class="st" id="btDec"></div><div class="row" id="btChips">${(c.btChips||[]).map(t=>`<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`;
@@ -240,7 +256,7 @@ function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return
     $('#btChips').onclick=e=>{const t=e.target.closest('.chip');if(t){$('#bt').value=c.btDraft=t.dataset.t;showDec()}};
     $('#btSave').onclick=()=>{const v=$('#bt').value.trim().toUpperCase().replace(/\s+/g,'');if(!v)return st('Nhập batch code trước.',true);
       c.batch=v;c.btDraft=undefined;c.btChips=[];draw();toast('Đã lưu batch '+v);
-      busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,c.it.hh,c.it.name,c.it.brand,0,c.bc||'',S.who,v).then(renderSum).catch(e=>st('Chưa lưu được batch: '+e.message,true)))};
+      busy=busy.then(()=>run('addCount',S.kho,S.pin,D(),c.it.hh,c.it.name,c.it.brand,0,c.bc||'',S.who,v).then(renderSum).catch(e=>st('Chưa lưu được batch: '+e.message,true)))};
     $('#btPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc batch code…');
       try{const t=await ocr(f);const toks=[...new Set((t.toUpperCase().match(/[A-Z0-9]{2,12}/g)||[]).filter(x=>/\d/.test(x)&&x.length>=3))].slice(0,8);
         c.btChips=toks;if(toks[0]&&!c.btDraft)c.btDraft=toks[0];st(toks.length?'Chọn đúng batch code bên dưới (hoặc sửa tay) rồi bấm Lưu.':'Chưa đọc được batch. Chụp gần, đủ sáng, hoặc gõ tay.',!toks.length);draw()}
@@ -269,9 +285,9 @@ async function choose(it){const bc=S.cur?.bc;S.cur={bc,it};if(bc){S.bc[bc]=[it.h
 
 let busy=Promise.resolve();
 function add(it,d){S.cur.n=(S.cur.n||0)+d;draw();toast((d>0?'+':'')+d+' · '+it.name.slice(0,40));
-  busy=busy.then(()=>run('addCount',S.kho,S.pin,S.day,it.hh,it.name,it.brand,d,S.cur?.bc||'',S.who,S.cur?.batch||'').then(renderSum).catch(e=>st('Chưa ghi được: '+e.message,true)))}
+  busy=busy.then(()=>run('addCount',S.kho,S.pin,D(),it.hh,it.name,it.brand,d,S.cur?.bc||'',S.who,S.cur?.batch||'').then(renderSum).catch(e=>st('Chưa ghi được: '+e.message,true)))}
 
-function loadSum(){$('#sumT').textContent='Đợt kiểm '+S.day.split('-').reverse().join('/');run('getSummary',S.kho,S.pin,S.day).then(renderSum).catch(e=>st(e.message,true))}
+function loadSum(){$('#sumT').textContent=MODE[S.mode][0]+' '+S.day.split('-').reverse().join('/');run('getSummary',S.kho,S.pin,D()).then(renderSum).catch(e=>st(e.message,true))}
 function totalOf(it){const r=(S.rows||[]).find(r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name));return r?r[3]:0}
 function renderSum(rows){const el=$('#sum');S.rows=rows||[];if($('#tot')&&S.cur&&S.cur.it)$('#tot').textContent=totalOf(S.cur.it);if(!rows||!rows.length){el.innerHTML='<div class="st">Chưa có món nào trong đợt này. Chụp mã vạch hoặc tìm theo tên để bắt đầu.</div>';return}
   const g={};rows.forEach(r=>{(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r)});let tot=0;rows.forEach(r=>tot+=r[3]);
@@ -284,7 +300,7 @@ function renderSum(rows){const el=$('#sum');S.rows=rows||[];if($('#tot')&&S.cur&
 const rk=r=>r[0]||('new:'+r[2]+' '+r[1]);
 const hm=t=>{const m=String(t).match(/(\d{1,2}):(\d{2})/);return m?m[1].padStart(2,'0')+':'+m[2]:t};
 async function openEntries(r,box){box.hidden=false;box.innerHTML='<div class="st">Đang tải các lần đếm…</div>';
-  try{const es=await run('getEntries',S.kho,S.pin,S.day,r[0],r[1],r[2]);
+  try{const es=await run('getEntries',S.kho,S.pin,D(),r[0],r[1],r[2]);
     box.innerHTML=es.length?es.map(x=>`<div class="en"><span class="mono">${hm(x[1])}</span><span>${x[2]>0?'+'+x[2]:x[2]===0?'batch':x[2]}${x[4]?' · '+esc(x[4]):''}<br><span class="st">${esc(x[3])}</span></span><button class="del" data-id="${esc(x[0])}" data-t="${esc(x[1])}">Xoá</button></div>`).join(''):'<div class="st">Không có dòng nào.</div>'}
   catch(x){box.innerHTML='<div class="st e">Chưa tải được: '+esc(x.message)+'</div>'}}
 $('#sum').onclick=async e=>{const h=e.target.closest('.hsd');if(h){try{navigator.clipboard.writeText(h.dataset.c)}catch(x){}toast('Đã copy batch '+h.dataset.c+' — dán vào trang tra cứu');return}
@@ -295,6 +311,6 @@ $('#sum').onclick=async e=>{const h=e.target.closest('.hsd');if(h){try{navigator
   const b=e.target.closest('.del');if(!b)return;
   if(!b.classList.contains('arm')){$('#sum').querySelectorAll('.del.arm').forEach(x=>{x.classList.remove('arm');x.textContent='Xoá'});b.classList.add('arm');b.textContent='Chắc chắn xoá?';return}
   b.disabled=true;b.textContent='Đang xoá…';
-  try{const rows=await run('deleteEntry',S.kho,S.pin,S.day,b.dataset.id,b.dataset.t);renderSum(rows);toast('Đã xoá 1 dòng')}
+  try{const rows=await run('deleteEntry',S.kho,S.pin,D(),b.dataset.id,b.dataset.t);renderSum(rows);toast('Đã xoá 1 dòng')}
   catch(x){b.disabled=false;b.textContent='Xoá';st('Chưa xoá được: '+x.message,true)}};
 </script></body></html>
