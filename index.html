@@ -73,7 +73,7 @@ details summary{cursor:pointer;padding:4px 0}
   </section>
 </main>
 <div class="toast" id="toast" hidden></div><datalist id="brandList"></datalist>
-<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';document.head.appendChild(s)"></script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -153,7 +153,7 @@ let ZR=null;function zr(){if(ZR)return ZR;const Z=window.ZXing,h=new Map();h.set
   ZR=new Z.MultiFormatReader();ZR.setHints(h);return ZR}
 function zx(c){const Z=window.ZXing;if(!Z)return null;const src=new Z.HTMLCanvasElementLuminanceSource(c);
   for(const B of [Z.HybridBinarizer,Z.GlobalHistogramBinarizer]){try{return zr().decode(new Z.BinaryBitmap(new B(src))).getText()}catch(e){}}return null}
-function crop(src,x,y,w,h,maxW,rot){const k=Math.min(1,maxW/w);const c=document.createElement('canvas');const W=Math.round(w*k),H=Math.round(h*k);
+function crop(src,x,y,w,h,maxW,rot,up){const k=up?maxW/w:Math.min(1,maxW/w);const c=document.createElement('canvas');const W=Math.round(w*k),H=Math.round(h*k);
   if(rot){c.width=H;c.height=W}else{c.width=W;c.height=H}const g=c.getContext('2d');
   if(rot){g.translate(H/2,W/2);g.rotate(Math.PI/2);g.drawImage(src,x,y,w,h,-W/2,-H/2,W,H)}else g.drawImage(src,x,y,w,h,0,0,W,H);return c}
 async function detectOn(c){if(BD){try{const r=await BD.detect(c);if(r[0])return r[0].rawValue}catch(e){}}return zx(c)}
@@ -176,18 +176,26 @@ async function startLive(){if(LV.on)return;const v=$('#lvVideo');
   try{LV.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}})}
   catch(e){st('Không mở được camera. Cho phép trình duyệt dùng camera rồi thử lại.',true);return}
   try{const tr=LV.stream.getVideoTracks()[0],cp=tr.getCapabilities?tr.getCapabilities():{};if(cp.focusMode&&cp.focusMode.includes('continuous'))await tr.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}
-  v.srcObject=LV.stream;await v.play().catch(()=>{});LV.on=true;$('#live').hidden=false;$('#liveBtn').textContent='Dừng quét';$('#lvMsg').textContent='Đưa mã vạch vào khung đỏ. Mỗi lần nhận = +1. Đếm món giống nhau: đưa ra khỏi khung rồi đưa món tiếp theo vào.';loopLive()}
+  try{const tr=LV.stream.getVideoTracks()[0],cp=tr.getCapabilities?tr.getCapabilities():{};if(cp.zoom&&cp.zoom.max>=2)await tr.applyConstraints({advanced:[{zoom:1.6}]})}catch(e){}
+  v.srcObject=LV.stream;await v.play().catch(()=>{});LV.on=true;LV.startAt=Date.now();LV.seenAt=0;LV.tick=0;$('#live').hidden=false;$('#liveBtn').textContent='Dừng quét';$('#lvMsg').textContent='Đưa mã vạch vào khung đỏ. Mỗi lần nhận = +1. Đếm món giống nhau: đưa ra khỏi khung rồi đưa món tiếp theo vào.';loopLive()}
 function stopLive(){LV.on=false;if(LV.stream)LV.stream.getTracks().forEach(t=>t.stop());LV.stream=null;$('#live').hidden=true;$('#liveBtn').textContent='Quét liên tục bằng camera'}
 async function loopLive(){if(!LV.on)return;const v=$('#lvVideo');
-  if(!LV.busy&&v.videoWidth&&!(S.cur&&!S.cur.it)){LV.busy=true;LV.tick++;
-    const W=v.videoWidth,H=v.videoHeight;const t=LV.tick%3;
-    const c=t===0?crop(v,0,H*.3,W,H*.4,1100,0):t===1?crop(v,0,0,W,H,900,0):crop(v,W*.3,0,W*.4,H,1100,1);
-    const code=await detectOn(c);LV.busy=false;
-    if(code){const now=Date.now();
-      if(code===LV.last&&now-LV.lastAt<2000){LV.lastAt=now}
-      else{if(LV.cand===code)LV.candN++;else{LV.cand=code;LV.candN=1}
-        if(LV.candN>=2||BD){LV.last=code;LV.lastAt=now;LV.cand='';beep();lookup(code);$('#lvMsg').textContent=S.cur&&S.cur.it?'✓ +1 · '+S.cur.it.name:'Mã mới '+code+' — chọn sản phẩm bên dưới, xong quét tiếp'}}}}
-  setTimeout(loopLive,120)}
+  const waiting=S.cur&&S.cur.bc&&!S.cur.it;
+  if(waiting){$('#lvMsg').textContent='Đang chờ bạn chọn sản phẩm cho mã '+S.cur.bc+' (bên dưới), chọn xong sẽ quét tiếp.'}
+  else if(!LV.busy&&v.videoWidth){LV.busy=true;LV.tick++;
+    try{const W=v.videoWidth,H=v.videoHeight;const t=LV.tick%5;
+      const c=t===0?crop(v,0,H*.3,W,H*.4,1280,0):t===1?crop(v,W*.2,H*.32,W*.6,H*.36,1400,0,1):t===2?crop(v,W*.3,H*.38,W*.4,H*.24,1400,0,1):t===3?crop(v,W*.3,0,W*.4,H,1280,1):crop(v,0,0,W,H,960,0);
+      const code=await detectOn(c);const now=Date.now();
+      if(code){LV.seenAt=now;
+        if(code===LV.last&&now-LV.lastAt<2000){LV.lastAt=now}
+        else{if(LV.cand===code)LV.candN++;else{LV.cand=code;LV.candN=1}
+          const sure=BD||/^(\d{8}|\d{12,13})$/.test(code)||LV.candN>=2;
+          if(sure){LV.last=code;LV.lastAt=now;LV.cand='';beep();lookup(code);$('#lvMsg').textContent=S.cur&&S.cur.it?'✓ +1 · '+S.cur.it.name:'Mã mới '+code+' — chọn sản phẩm bên dưới, chọn xong sẽ quét tiếp'}}}
+      else if(now-(LV.seenAt||LV.startAt)>5000&&now-(LV.hintAt||0)>2500){LV.hintAt=now;
+        $('#lvMsg').textContent=(!BD&&!window.ZXing)?'Chưa tải được bộ đọc mã vạch — kiểm tra mạng rồi bấm Dừng quét và mở lại.':'Chưa thấy mã… Đưa mã vạch vào giữa khung, cách 10–20 cm, giữ yên, tránh lóa. ('+W+'×'+H+', '+(BD?'BD':'ZX')+' '+LV.tick+')'}}
+    catch(e){$('#lvMsg').textContent='Lỗi khi quét: '+(e.message||e)}
+    finally{LV.busy=false}}
+  setTimeout(loopLive,100)}
 
 $('#photo').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc mã vạch…');
   try{const r=await decode(f);if(r)lookup(r);else st('Chưa đọc được mã. Chụp gần, đủ sáng, mã vạch nằm ngang.',true)}catch(x){st('Không mở được ảnh.',true)}};
