@@ -56,7 +56,7 @@ details summary{cursor:pointer;padding:4px 0}
   </section>
   <section id="stock" hidden><div class="card">
     <div class="row" style="justify-content:space-between"><div class="eb">Tồn kho tổng (Hip + Đù)</div><button class="btn" id="skRefresh">Làm mới</button></div>
-    <input id="skQ" placeholder="Tìm tên, hãng hoặc mã HH"><div class="st" id="skInfo"></div><div id="skList"></div>
+    <input id="skQ" placeholder="Tìm tên, hãng hoặc mã HH"><select id="skF"><option value="">Tất cả hàng</option><option value="soon">Sắp hết hạn (≤ 6 tháng) và đã hết hạn</option></select><div class="st" id="skInfo"></div><div id="skList"></div>
     <div class="st">Cách tính: mỗi kho lấy số của lần kiểm gần nhất có đếm món đó (ngày ghi dưới tên), rồi cộng nhập đợt / hàng hoàn / chuyển đến và trừ hàng bán / chuyển đi sau ngày đó (số trong ngoặc).</div></div>
     <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đơn đã gửi, chưa trừ kho</div><button class="btn" id="poRefresh">Làm mới</button></div>
     <div class="st" id="poInfo">Đơn trong sổ đơn hàng có đơn vị vận chuyển — bấm kho đã gửi để trừ tồn. "Không từ kho" cho đơn đặt riêng.</div><div id="poList"></div></div></section>
@@ -150,9 +150,11 @@ function decodeBatch(brand,code){const b=BK(brand),c=String(code||'').toUpperCas
     const now=new Date();const ok=cand.filter(yy=>dt(yy)<=now);if(!ok.length)return null;y=Math.max(...ok);m=dt(y).getMonth()+1;rule='Bath & Body Works'}
   else return null;
   if(!y)return null;const ex=new Date(y,m-1+36,1);const mo=(new Date().getFullYear()-y)*12+(new Date().getMonth()+1-m);
-  return{mfg:String(m).padStart(2,'0')+'/'+y,exp:String(ex.getMonth()+1).padStart(2,'0')+'/'+ex.getFullYear(),age:mo,rule,expired:ex<=new Date(),soon:!(ex<=new Date())&&(ex-new Date())<183*864e5}}
-function batchInfo(brand,batches){return String(batches||'').split(', ').filter(Boolean).map(bc=>{const d=decodeBatch(brand,bc);
-  return esc(bc)+(d?` <span class="${d.expired?'xp':d.soon?'sn':'okd'}">NSX ${d.mfg} · HSD~${d.exp}</span>`:'')}).join(' · ')}
+  return{t:ex.getTime(),mfg:String(m).padStart(2,'0')+'/'+y,exp:String(ex.getMonth()+1).padStart(2,'0')+'/'+ex.getFullYear(),age:mo,rule,expired:ex<=new Date(),soon:!(ex<=new Date())&&(ex-new Date())<183*864e5}}
+function batchList(brand,batches){return [...new Set(String(batches||'').split(', ').filter(Boolean))].map(bc=>({bc,d:decodeBatch(brand,bc)})).sort((a,b)=>(a.d?a.d.t:9e15)-(b.d?b.d.t:9e15))}
+function batchInfo(brand,batches){const L=batchList(brand,batches),multi=L.filter(x=>x.d).length>1;return L.map((x,i)=>{const d=x.d;
+  return esc(x.bc)+(d?` <span class="${d.expired?'xp':d.soon?'sn':'okd'}">NSX ${d.mfg} · HSD~${d.exp}${multi&&i===0?' · bán trước':''}</span>`:'')}).join(' · ')}
+function expOf(r){const L=batchList(r[2],r[7]).filter(x=>x.d);return L.length?L[0].d:null}
 
 const BFMT=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf'];
 let BD=null;try{if('BarcodeDetector'in window)BD=new BarcodeDetector({formats:BFMT})}catch(e){BD=null}
@@ -214,7 +216,7 @@ $('#photoName').onchange=async e=>{const f=e.target.files[0];e.target.value='';i
   catch(x){st(x.message||'Không đọc được ảnh.',true)}};
 function showStock(on){$('#stock').hidden=!on;$('#app').hidden=on;$('#tabCount').classList.toggle('on',!on);$('#tabStock').classList.toggle('on',on);if(on){stopLive();loadStock()}}
 $('#tabCount').onclick=()=>showStock(false);$('#tabStock').onclick=()=>showStock(true);$('#skRefresh').onclick=()=>loadStock();
-$('#skQ').oninput=()=>renderStock();
+$('#skQ').oninput=()=>renderStock();$('#skF').onchange=()=>renderStock();
 const dshort=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'—';
 async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';loadPO();try{S.stock=await run('getStock',S.kho,S.pin);renderStock()}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message}}
 async function loadPO(){$('#poList').innerHTML='<div class="st">Đang tải đơn…</div>';try{renderPO(await run('getPendingOrders',S.kho,S.pin))}catch(e){$('#poList').innerHTML='<div class="st e">Chưa tải được: '+esc(e.message)+'</div>'}}
@@ -226,13 +228,15 @@ $('#poList').onclick=async e=>{const b=e.target.closest('[data-o]');if(!b)return
   try{renderPO(await run('assignOrder',S.kho,S.pin,keys,b.dataset.to,S.who));toast(b.dataset.to==='skip'?'Đã bỏ qua đơn '+b.dataset.o:'Đã trừ kho đơn '+b.dataset.o);S.stock=await run('getStock',S.kho,S.pin);renderStock()}
   catch(x){toast('Chưa ghi được: '+x.message);loadPO()}};
 function renderStock(){const rows=S.stock||[];const q=fold($('#skQ').value).split(/\s+/).filter(Boolean);
-  const f=rows.filter(r=>{const t=fold(r.join(' '));return q.every(w=>t.includes(w))});
+  const fx=$('#skF').value;let nx=0,ns=0;rows.forEach(r=>{if(r[3]+r[5]<=0)return;const d=expOf(r);if(d&&d.expired)nx++;else if(d&&d.soon)ns++});
+  const f=rows.filter(r=>{const t=fold(r.join(' '));if(!q.every(w=>t.includes(w)))return false;if(fx){const d=expOf(r);return r[3]+r[5]>0&&d&&(d.expired||d.soon)}return true});
+  if(fx)f.sort((a,b)=>expOf(a).t-expOf(b).t);
   let th=0,td=0;f.forEach(r=>{th+=r[3];td+=r[5]});
-  $('#skInfo').textContent=f.length+' mã hàng · Hip '+th+' · Đù '+td+' · Tổng '+(th+td);
+  $('#skInfo').innerHTML=esc(f.length+' mã hàng · Hip '+th+' · Đù '+td+' · Tổng '+(th+td))+(nx||ns?`<br><span class="xp">${nx} món đã hết hạn</span> · <span class="sn">${ns} món hết hạn trong 6 tháng</span>`:'');
   const g={};f.forEach(r=>(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r));
   let h='<div class="sk skh"><span>Sản phẩm</span><span class="n">Hip</span><span class="n">Đù</span><span class="n">Tổng</span></div>',n=0;
   for(const b of Object.keys(g).sort()){if(n>400)break;const a=g[b];h+=`<div class="grp"><h3><span>${esc(b)}</span><span>${a.reduce((s,r)=>s+r[3]+r[5],0)}</span></h3>`;
-    for(const r of a.sort((x,y)=>x[1].localeCompare(y[1]))){n++;h+=`<div class="sk"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · Hip ${dshort(r[4])}${r[8]?' ('+(r[8]>0?'+':'')+r[8]+')':''} · Đù ${dshort(r[6])}${r[9]?' ('+(r[9]>0?'+':'')+r[9]+')':''}${r[7]?'<br>Batch '+batchInfo(r[2],r[7]):''}</span></span><span class="n">${r[3]}</span><span class="n">${r[5]}</span><span class="n t">${r[3]+r[5]}</span></div>`}
+    for(const r of (fx?a:a.sort((x,y)=>x[1].localeCompare(y[1])))){n++;h+=`<div class="sk"><span>${esc(r[1])}<br><span class="mono" style="color:var(--mut)">${esc(r[0]||'hàng mới')} · Hip ${dshort(r[4])}${r[8]?' ('+(r[8]>0?'+':'')+r[8]+')':''} · Đù ${dshort(r[6])}${r[9]?' ('+(r[9]>0?'+':'')+r[9]+')':''}${r[7]?'<br>Batch '+batchInfo(r[2],r[7]):''}</span></span><span class="n">${r[3]}</span><span class="n">${r[5]}</span><span class="n t">${r[3]+r[5]}</span></div>`}
     h+='</div>'}
   if(n>400)h+='<div class="st">Đang hiện 400 dòng đầu — gõ ô tìm để lọc.</div>';
   $('#skList').innerHTML=f.length?h:'<div class="st">Chưa có dữ liệu tồn kho.</div>'}
