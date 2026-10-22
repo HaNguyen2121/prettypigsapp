@@ -269,15 +269,18 @@ function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return
       <label class="st">Tên sản phẩm + dung tích</label>
       <input id="nn" placeholder="vd: Dramatically 50ml" required value="${esc(c.ocr?.name||'')}">
       <div class="st" id="nPrev"></div>
-      <button class="btn p">Thêm và đếm 1</button></form></details>
+      <div class="st">App sẽ tạo mã HH mới trong sheet HÀNG HÓA, dùng được ngay cho sổ đơn.</div><button class="btn p">Thêm và đếm 1</button></form></details>
     <button class="btn" id="cx">Huỷ</button></div>`;
   const q=$('#sq'),rs=$('#rs');q.oninput=()=>{rs.innerHTML=rowsHtml(search(q.value))};if(!c.ocr)q.focus();
   rs.onclick=e=>{const b=e.target.closest('[data-h]');if(!b)return;const x=S.by[b.dataset.h];choose({hh:x[0],name:x[1],brand:x[2]})};
   $('#nf').onsubmit=e=>{e.preventDefault();const b=$('#nb').value.trim().replace(/\s+/g,' ').toUpperCase();let n=$('#nn').value.trim().replace(/\s+/g,' ');
-    if(fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();if(!S.brands.some(x=>x.n===b))setBrands(S.brands.map(x=>x.n).concat(b));choose({hh:'',name:(b+' '+n).trim(),brand:b})};
+    if(fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();if(!b||!n)return st('Nhập đủ hãng và tên sản phẩm.',true);const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='Đang tạo mã hàng…';
+    run('createItem',S.kho,S.pin,b,n).then(c=>{const x=[c[0],c[1],c[2]];x.f=fold(x.join(' '));x.fb=fold(x[2]);if(!S.by[x[0]]){S.cat.push(x);S.by[x[0]]=x}
+      if(!S.brands.some(y=>y.n===b))setBrands(S.brands.map(y=>y.n).concat(b));toast('Đã tạo mã '+c[0]);choose({hh:c[0],name:c[1],brand:c[2]})})
+    .catch(x=>{btn.disabled=false;btn.textContent='Thêm và đếm 1';st('Chưa tạo được mã hàng: '+x.message,true)})};
   const nb=$('#nb'),nn=$('#nn'),prev=()=>{const b=nb.value.trim().toUpperCase(),known=!b||S.brands.some(x=>x.n===b);
     $('#nbHint').textContent=known?'':'Hãng mới (chưa có trong danh sách)';
-    let n=nn.value.trim();if(b&&fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();$('#nPrev').textContent=b||n?'Sẽ lưu thành: '+(b+' '+n).trim():''};
+    let n=nn.value.trim();if(b&&fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();$('#nPrev').textContent=b||n?'Sẽ lưu thành: '+(b&&n?b+' - '+n:(b+' '+n).trim()):''};
   nb.oninput=prev;nn.oninput=prev;prev();
   $('#cx').onclick=()=>{S.cur=null;draw()}}
 
