@@ -42,11 +42,13 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .rt{display:flex;align-items:center;gap:10px;flex-shrink:0}.del{border:1px solid var(--line);background:var(--s);color:var(--warn);font:600 12px inherit;font-family:inherit;padding:6px 10px;border-radius:8px;cursor:pointer}.del.arm{background:var(--warn);color:#fff;border-color:var(--warn)}
 .stack{display:flex;flex-direction:column;gap:6px;margin-top:10px}.stack .st{margin-top:4px}.stack .btn{margin-top:6px}
 details summary{cursor:pointer;padding:4px 0}
+#help details{border-top:1px solid var(--line);padding:6px 0}#help summary{font-weight:600}#help ol,#help ul{padding-left:20px;margin:6px 0}#help li{margin:4px 0;line-height:1.45}#help p{margin:6px 0;line-height:1.45}
 .odl{border-top:1px dashed var(--line);padding:8px 0}.odl .row{margin-top:4px;flex-wrap:nowrap}.okbox{margin-top:10px;padding:12px;border-radius:10px;background:var(--sunk);text-align:center}.okbox .code{font-size:26px;font-weight:700;margin:6px 0}.chip{font-size:12px;padding:2px 8px;border-radius:10px;background:var(--sunk);white-space:nowrap}.chip.warn{background:var(--warn);color:#fff}.rch{display:flex;justify-content:space-between;font-size:14px;margin:14px 0 4px}textarea{width:100%;box-sizing:border-box;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
 .sg{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed var(--line);font-size:14px}.sg .rt{flex-direction:column;gap:4px}
+.ckl{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}.ckl .rt{display:flex;gap:6px;align-items:center}.ckl.ok{color:var(--mut)}.ckl.ok b{color:var(--ink)}
 .po{border-top:1px solid var(--line);padding:10px 0}.po .row{margin-top:6px}.po .btn{padding:6px 10px;font-size:13px}
 </style></head><body>
-<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm / Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="tabOrder">Đơn</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
+<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm / Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="tabOrder">Đơn</button><button class="btn" id="tabHelp" title="Hướng dẫn">?</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
 <main class="w">
   <section id="loginBox" class="card">
     <div class="eb">Đăng nhập</div>
@@ -54,7 +56,7 @@ details summary{cursor:pointer;padding:4px 0}
       <label class="st">Kho</label><select id="kho"><option value="hip">Kho Hip</option><option value="du">Kho Đù</option></select>
       <label class="st">Mã PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="4 số">
       <label class="st">Tên người đếm</label><input id="who" placeholder="vd: Hà">
-    <button class="btn p big" id="loginBtn">Vào kho</button></div><div class="st" id="lst"></div>
+    <button class="btn p big" id="loginBtn">Vào kho</button></div><div class="st" id="lst"></div><button class="btn t" id="helpPre" style="margin-top:8px">Xem hướng dẫn sử dụng</button>
   </section>
   <section id="stock" hidden><div class="card">
     <div class="row" style="justify-content:space-between"><div class="eb">Tồn kho tổng (Hip + Đù)</div><button class="btn" id="skRefresh">Làm mới</button></div>
@@ -62,6 +64,25 @@ details summary{cursor:pointer;padding:4px 0}
     <div class="st">Cách tính: mỗi kho lấy số của lần kiểm gần nhất có đếm món đó (ngày ghi dưới tên), rồi cộng nhập đợt / hàng hoàn / chuyển đến và trừ hàng bán / chuyển đi sau ngày đó (số trong ngoặc).</div></div>
     <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đơn đã gửi, chưa trừ kho</div><button class="btn" id="poRefresh">Làm mới</button></div>
     <div class="st" id="poInfo">Đơn trong sổ đơn hàng có đơn vị vận chuyển — bấm kho đã gửi để trừ tồn. "Không từ kho" cho đơn đặt riêng.</div><div id="poList"></div></div></section>
+  <section id="help" hidden><div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Hướng dẫn sử dụng</div><button class="btn" id="helpBack">Quay lại</button></div>
+    <details open><summary>Quy trình hằng ngày</summary>
+      <p><b>Hàng sẵn</b> (gửi từ kho Hip/Đù): Tạo đơn → đóng gói: Xuất bán, quét từng món → gửi đi. Kho tự trừ.</p>
+      <p><b>Đơn order</b> (khách đặt trước): Tạo đơn loại Order → hàng về: Kiểm hàng order → giao khách. Không đụng kho.</p>
+      <p><b>Hàng mới về kho</b>: Nhập đợt hàng về, quét từng món + batch code.</p>
+      <p><b>Cuối ngày/tuần</b>: Đơn → Đối soát; chép sheet "Đơn app" sang sổ đơn khi ngồi máy tính.</p></details>
+    <details><summary>Đăng nhập & đổi kho</summary><ol><li>Chọn kho đang đứng (Hip hoặc Đù), nhập PIN của kho, ghi tên người làm.</li><li>Mọi thao tác quét/trừ đều tính cho kho đang đăng nhập. Sang kho kia thì bấm <b>Đổi kho</b>.</li></ol></details>
+    <details><summary>Kiểm kho (đếm tồn)</summary><ol><li>Tab <b>Đếm / Nhập</b> → Việc: <b>Kiểm kho</b>, chọn ngày đợt kiểm.</li><li>Chụp mã vạch hoặc tìm theo tên; mỗi lần quét +1, dùng + / − nếu đếm nhiều cái.</li><li>Mã vạch lạ: tìm đúng sản phẩm 1 lần, app nhớ mã đó cho các lần sau.</li><li>Số đếm của đợt này <b>thay</b> cho tồn cũ của món đó.</li></ol></details>
+    <details><summary>Nhập đợt hàng về</summary><ol><li>Việc: <b>Nhập đợt hàng về</b>, quét từng món như khi đếm — số được <b>cộng</b> vào tồn.</li><li>Nhập batch code (gõ hoặc Chụp → chọn mã đọc được) rồi bấm Lưu. App tự tính HSD cho các hãng có quy tắc (nhóm Estée Lauder, L'Oréal/CeraVe, Bath & Body Works, Drunk Elephant, Naturium…); hãng khác dùng nút <b>Tra HSD</b>.</li><li>Hàng order về giao thẳng cho khách thì <b>không</b> nhập đợt.</li></ol></details>
+    <details><summary>Chuyển kho · Hàng hoàn</summary><ul><li><b>Chuyển sang kho kia</b>: đăng nhập kho gửi đi, quét các món — trừ ở kho này, cộng bên kho kia.</li><li><b>Nhận hàng hoàn</b>: khách trả hàng về kho nào thì đăng nhập kho đó và quét — cộng lại tồn.</li><li>Khách huỷ đơn order / hàng order dư: nhập đợt vào kho để thành hàng sẵn.</li></ul></details>
+    <details><summary>Thêm hàng mới vào danh mục</summary><ol><li>Khi tìm không thấy: mở <b>Thêm hàng mới</b>, chọn hãng, gõ tên + dung tích.</li><li>App gợi ý món tương tự: <b>Chép tên</b> để sửa thành món mới (đổi màu/mùi), hoặc <b>Đúng món này</b> nếu đã có.</li><li>Ghi <b>Phân loại</b> (màu, mùi hương) để dễ phân biệt. Minisize bán lẻ tạo mã riêng.</li><li>App tạo mã HH mới trong sheet HÀNG HÓA, dùng được ngay cho sổ đơn.</li></ol></details>
+    <details><summary>Sửa khi quét nhầm</summary><ol><li>Trong danh sách đợt đang làm, bấm <b>Chi tiết</b> ở món bị nhầm.</li><li>Bấm <b>Xoá</b> ở dòng sai → bấm lần nữa để xác nhận.</li></ol></details>
+    <details><summary>Tồn kho & hạn sử dụng</summary><ul><li>Tab <b>Tồn kho</b>: tồn tổng Hip + Đù, tìm theo tên/hãng/mã HH.</li><li>Lọc <b>Sắp hết hạn</b> để xem hàng còn ≤ 6 tháng hoặc đã hết hạn; ưu tiên bán batch cũ trước.</li><li>Số trong ngoặc là phần nhập/xuất phát sinh sau lần kiểm gần nhất.</li></ul></details>
+    <details><summary>Đơn trong sổ đã gửi, chưa trừ kho</summary><ol><li>Tab <b>Tồn kho</b> → mục này liệt kê đơn trong sổ đơn đã có đơn vị vận chuyển nhưng chưa trừ kho.</li><li>Bấm kho đã gửi (Hip/Đù) để trừ tồn, hoặc "Không từ kho" cho đơn order.</li></ol></details>
+    <details><summary>Tạo đơn trên app</summary><ol><li>Tab <b>Đơn</b> → chọn Hàng sẵn hoặc Order, chọn kênh.</li><li>Gõ tên khách (app gợi ý khách cũ), nhập/chụp mã vận đơn nếu là Shopee.</li><li>Thêm món: tìm tên, chụp mã vạch, hoặc thêm món ngoài danh mục; điền phân loại, SL, giá.</li><li>Bấm <b>Lưu đơn</b> → app cấp mã HD nối tiếp sổ. Ghi mã lên gói hàng.</li><li>Đơn lưu vào sheet "Đơn app"; khi ngồi máy tính chép sang sổ đơn, giữ nguyên mã HD.</li></ol></details>
+    <details><summary>Xuất bán (đóng gói hàng sẵn)</summary><ol><li>Ở đơn Chờ gửi bấm <b>Quét khi đóng gói</b> (hoặc Việc: Xuất bán, nhập/chụp mã HD hay mã vận đơn).</li><li>Quét từng món bỏ vào gói — trừ ở kho đang đăng nhập; app hiện các món cần soạn.</li><li>Không cần quét từng món: bấm <b>Trừ kho cả đơn</b> (bấm 2 lần để xác nhận kho).</li><li>Đơn trong sổ (không tạo trên app) cũng xuất được bằng mã HD hoặc mã vận đơn.</li></ol></details>
+    <details><summary>Kiểm hàng order</summary><ol><li>Hàng order về: ở đơn Chờ hàng bấm <b>Kiểm hàng</b>.</li><li>Quét mã vạch hoặc bấm + cho từng món; xem kỹ phân loại. App báo nếu món quét không có trong đơn.</li><li>Đủ hết thì bấm <b>Đủ hàng — Đã giao</b>. Bước này không trừ kho; tiến độ được nhớ trên máy nếu kiểm dở.</li></ol></details>
+    <details><summary>Đối soát</summary><ol><li>Tab <b>Đơn</b> → Đối soát đơn → <b>Kiểm tra</b>.</li><li>Xem 4 nhóm: đơn app chưa xuất kho · đơn sổ đã gửi chưa trừ kho · hàng đã xuất không khớp đơn · đơn xuất lệch số lượng.</li><li>Xử lý từng dòng rồi kiểm tra lại đến khi trống.</li></ol></details>
+  </div></section>
   <section id="orders" hidden>
     <div class="card"><div class="eb">Tạo đơn</div>
       <div class="row"><select id="odType" style="flex:1"><option value="san">Hàng sẵn (gửi từ kho)</option><option value="order">Đơn order (khách đặt trước)</option></select><select id="odCh" style="flex:1"><option>Facebook</option><option>Shopee</option><option>Khác</option></select></div>
@@ -73,6 +94,7 @@ details summary{cursor:pointer;padding:4px 0}
       <textarea id="odNote" rows="2" placeholder="Ghi chú (địa chỉ, cọc…)"></textarea>
       <div class="st" id="odTot"></div>
       <button class="btn p big" id="odSave">Lưu đơn</button><div id="odDone"></div></div>
+    <div class="card" id="ckCard" hidden><div class="row" style="justify-content:space-between"><div class="eb">Kiểm hàng order</div><label class="btn p">Quét mã vạch<input type="file" id="ckPhoto" accept="image/*" capture="environment"></label></div><div id="ckBody"></div></div>
     <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đơn tạo trên app (30 ngày)</div><button class="btn" id="odRefresh">Làm mới</button></div><div id="odList"><div class="st">Đang tải…</div></div></div>
     <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đối soát đơn</div><button class="btn" id="rcRun">Kiểm tra</button></div>
       <div class="st">So đơn (sổ + app) với hàng đã quét xuất bán: đơn chưa xuất, xuất mà không có đơn, xuất lệch món.</div><div id="rcOut"></div></div>
@@ -119,7 +141,7 @@ $('#loginBtn').onclick=async()=>{
     setMode('count');
   }catch(e){$('#lst').textContent=e.message||'Không vào được kho.'}
 };
-$('#logout').onclick=()=>{stopLive();showStock(false);S.cur=null;draw();$('#app').hidden=true;$('#stock').hidden=true;$('#orders').hidden=true;$('#tabs').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
+$('#logout').onclick=()=>{stopLive();showStock(false);S.cur=null;draw();$('#app').hidden=true;$('#stock').hidden=true;$('#orders').hidden=true;$('#help').hidden=true;$('#tabs').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
 $('#day').onchange=e=>{S.day=e.target.value||today();loadSum()};
 S.mode='count';const MODE={count:['Đợt kiểm','Đếm toàn bộ hàng đang có trong kho. Số này thay cho tồn cũ.'],in:['Nhập đợt','Hàng mới về kho này — cộng thêm vào tồn.'],move:['Chuyển kho','Hàng gửi từ kho này sang kho kia — trừ ở đây, cộng bên kia.'],ret:['Hàng hoàn','Hàng khách trả về kho này — cộng thêm vào tồn.'],out:['Xuất bán','Nhập/chụp mã đơn (HD… hoặc mã vận đơn), rồi quét từng món bỏ vào gói — trừ kho này.']};
 const D=()=>S.mode==='count'?S.day:S.mode==='out'?'out:'+S.day+':'+(S.oc||''):S.mode+':'+S.day;
@@ -232,10 +254,10 @@ $('#photoName').onchange=async e=>{const f=e.target.files[0];e.target.value='';i
     S.cur={bc:S.cur&&!S.cur.it?S.cur.bc:null,it:null,ocr:Object.assign(p,{res})};
     st(res.length?'Đọc được'+(p.brand||p.vol?': '+[p.brand,p.vol].filter(Boolean).join(' · '):'')+'. Chọn đúng sản phẩm bên dưới.':'Chưa khớp sản phẩm nào. Sửa tên rồi bấm Thêm hàng mới, hoặc chụp lại gần hơn.',!res.length);draw()}
   catch(x){st(x.message||'Không đọc được ảnh.',true)}};
-function showTab(t){$('#stock').hidden=t!=='stock';$('#app').hidden=t!=='app';$('#orders').hidden=t!=='orders';$('#tabCount').classList.toggle('on',t==='app');$('#tabStock').classList.toggle('on',t==='stock');$('#tabOrder').classList.toggle('on',t==='orders');
+function showTab(t){$('#stock').hidden=t!=='stock';$('#app').hidden=t!=='app';$('#orders').hidden=t!=='orders';$('#help').hidden=t!=='help';$('#tabHelp').classList.toggle('on',t==='help');$('#tabCount').classList.toggle('on',t==='app');$('#tabStock').classList.toggle('on',t==='stock');$('#tabOrder').classList.toggle('on',t==='orders');
   if(t!=='app')stopLive();if(t==='stock')loadStock();if(t==='orders')loadOrders()}
 function showStock(on){showTab(on?'stock':'app')}
-$('#tabCount').onclick=()=>showTab('app');$('#tabStock').onclick=()=>showTab('stock');$('#tabOrder').onclick=()=>showTab('orders');$('#skRefresh').onclick=()=>loadStock();
+$('#tabCount').onclick=()=>showTab('app');$('#tabStock').onclick=()=>showTab('stock');$('#tabOrder').onclick=()=>showTab('orders');$('#tabHelp').onclick=()=>{S.prevTab=['app','stock','orders'].find(x=>!$('#'+x).hidden)||S.prevTab;showTab('help');scrollTo(0,0)};$('#helpPre').onclick=()=>{$('#loginBox').hidden=true;$('#help').hidden=false};$('#helpBack').onclick=()=>{if($('#tabs').hidden){$('#help').hidden=true;$('#loginBox').hidden=false}else showTab(S.prevTab||'app')};$('#skRefresh').onclick=()=>loadStock();
 $('#skQ').oninput=()=>renderStock();$('#skF').onchange=()=>renderStock();
 const dshort=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'—';
 async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';loadPO();try{S.stock=await run('getStock',S.kho,S.pin);renderStock()}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message}}
@@ -382,15 +404,38 @@ $('#odDone').onclick=e=>{const b=e.target.closest('[data-cp]');if(b){try{navigat
 function renderAO(){const L=S.ao||[];$('#odList').innerHTML=L.length?L.map(o=>{const done=o[8]==='Đã gửi'||o[8]==='Đã giao'||o[8]==='Huỷ';
   return `<div class="po"><div><b class="mono">${esc(o[0])}</b> · ${dshort(o[1])} · ${esc(o[3])} · ${esc(o[4])} <span class="chip ${done?'':'warn'}">${esc(o[8])}${o[10]?' ('+esc(o[10])+')':''}</span></div>
   <div class="st">${esc(o[2])}${o[5]?' · vận đơn '+esc(o[5]):''}${o[6]?' · '+esc(o[6]):''}</div>${o[9].map(l=>`<div class="st" style="color:var(--ink)">${l[3]} × ${esc(l[1])}${l[2]?' — '+esc(l[2]):''}${l[4]?' · '+l[4].toLocaleString('vi-VN')+'đ':''}</div>`).join('')}
-  <div class="row">${o[8]==='Chờ gửi'?`<button class="btn" data-sc="${esc(o[0])}">Quét khi đóng gói</button><button class="btn" data-sh="${esc(o[0])}">Trừ kho cả đơn</button>`:''}${o[8]==='Chờ hàng'?`<button class="btn" data-st="Đã giao" data-c="${esc(o[0])}">Đã giao</button>`:''}${!done?`<button class="btn t" data-st="Huỷ" data-c="${esc(o[0])}">Huỷ</button>`:''}<button class="btn t" data-cp="${esc(o[0])}">Chép mã</button></div></div>`}).join(''):'<div class="st">Chưa có đơn nào.</div>'}
+  <div class="row">${o[8]==='Chờ gửi'?`<button class="btn" data-sc="${esc(o[0])}">Quét khi đóng gói</button><button class="btn" data-sh="${esc(o[0])}">Trừ kho cả đơn</button>`:''}${o[8]==='Chờ hàng'?`<button class="btn p" data-ck="${esc(o[0])}">Kiểm hàng</button><button class="btn" data-st="Đã giao" data-c="${esc(o[0])}">Đã giao</button>`:''}${!done?`<button class="btn t" data-st="Huỷ" data-c="${esc(o[0])}">Huỷ</button>`:''}<button class="btn t" data-cp="${esc(o[0])}">Chép mã</button></div></div>`}).join(''):'<div class="st">Chưa có đơn nào.</div>'}
 $('#odRefresh').onclick=()=>loadAO();
 $('#odList').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.cp){try{navigator.clipboard.writeText(b.dataset.cp)}catch(x){}return toast('Đã chép '+b.dataset.cp)}
+  if(b.dataset.ck)return ckOpen(b.dataset.ck);
   if(b.dataset.sc){S.oc=b.dataset.sc;$('#oc').value=S.oc;showTab('app');setMode('out');return}
   if(b.dataset.sh){if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Trừ ở '+(S.kho==='hip'?'Kho Hip':'Kho Đù')+'?';return}
     b.disabled=true;try{S.ao=await run('shipOrder',S.kho,S.pin,b.dataset.sh,S.who);renderAO();toast('Đã trừ kho đơn '+b.dataset.sh)}catch(x){toast(x.message);b.disabled=false}return}
   if(b.dataset.st){if(b.dataset.st==='Huỷ'&&!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Chắc huỷ?';return}
     b.disabled=true;try{S.ao=await run('setOrderStatus',S.kho,S.pin,b.dataset.c,b.dataset.st);renderAO()}catch(x){toast(x.message);b.disabled=false}}};
+/* ===== Kiểm hàng order (không trừ kho) ===== */
+const ckK=c=>'ck:'+c;
+function ckLoad(c){try{return JSON.parse(localStorage.getItem(ckK(c))||'{}')||{}}catch(e){return{}}}
+function ckSave(){try{localStorage.setItem(ckK(S.ck.code),JSON.stringify(S.ck.got))}catch(e){}}
+function ckOpen(code){const o=findAO(code);if(!o)return toast('Không thấy đơn '+code);S.ck={code:o[0],o,got:ckLoad(o[0])};$('#ckCard').hidden=false;ckDraw();$('#ckCard').scrollIntoView({behavior:'smooth',block:'start'})}
+function ckDraw(){const {o,got}=S.ck;let need=0,have=0;
+  const rows=o[9].map((l,i)=>{const g=Math.min(got[i]||0,l[3]);need+=l[3];have+=g;const ok=g>=l[3];
+    return `<div class="ckl${ok?' ok':''}"><span>${ok?'✓':'○'} ${esc(l[1])}${l[2]?' — <b>'+esc(l[2])+'</b>':''}<br><span class="mono" style="color:var(--mut)">${esc(l[0]||'ngoài danh mục')}</span></span><span class="rt"><b>${g}/${l[3]}</b><button class="det" data-m="${i}">−</button><button class="det" data-p="${i}">+</button></span></div>`}).join('');
+  $('#ckBody').innerHTML=`<div style="margin-top:6px"><b class="mono">${esc(o[0])}</b> · ${esc(o[4])}</div><div class="st">Quét mã vạch hoặc bấm + từng món, nhớ xem đúng phân loại. Bước này không trừ kho.</div>${rows}
+    <div class="row" style="margin-top:8px">${have>=need?'<button class="btn p" id="ckDone">Đủ hàng — Đã giao</button>':`<span class="st e">Còn thiếu ${need-have}/${need} món</span>`}<button class="btn t" id="ckClose">Đóng</button></div>`}
+function ckHit(i){const l=S.ck.o[9][i];const g=S.ck.got[i]||0;if(g>=l[3]){toast('Món này đã đủ '+l[3]);return}S.ck.got[i]=g+1;ckSave();ckDraw();toast('✓ '+l[1].slice(0,40))}
+$('#ckBody').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.p!=null)return ckHit(+b.dataset.p);
+  if(b.dataset.m!=null){const i=+b.dataset.m;S.ck.got[i]=Math.max(0,(S.ck.got[i]||0)-1);ckSave();return ckDraw()}
+  if(b.id==='ckClose'){$('#ckCard').hidden=true;S.ck=null;return}
+  if(b.id==='ckDone'){b.disabled=true;b.textContent='Đang lưu…';const c=S.ck.code;
+    try{S.ao=await run('setOrderStatus',S.kho,S.pin,c,'Đã giao');try{localStorage.removeItem(ckK(c))}catch(x){}$('#ckCard').hidden=true;S.ck=null;renderAO();toast('Đơn '+c+' đã giao')}
+    catch(x){toast(x.message);b.disabled=false;b.textContent='Đủ hàng — Đã giao'}}};
+$('#ckPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!S.ck)return;toast('Đang đọc mã vạch…');
+  try{const r=await decode(f);if(!r)return toast('Chưa đọc được mã vạch — bấm + bằng tay');const m=S.bc[r];if(!m)return toast('Mã '+r+' chưa gán sản phẩm — bấm + bằng tay');
+    const L=S.ck.o[9];let i=L.findIndex((l,k)=>l[0]===m[0]&&(S.ck.got[k]||0)<l[3]);if(i<0)i=L.findIndex(l=>l[0]===m[0]);
+    if(i<0)return toast('⚠ '+(m[1]||m[0])+' KHÔNG có trong đơn này');ckHit(i)}catch(x){toast('Không mở được ảnh')}};
 /* ===== Đối soát ===== */
 $('#rcRun').onclick=async()=>{const el=$('#rcOut');el.innerHTML='<div class="st">Đang đối soát…</div>';
   try{const r=await run('getReconcile',S.kho,S.pin);const po=await run('getPendingOrders',S.kho,S.pin).catch(()=>[]);const pc=[...new Set(po.map(x=>x[2]))];
