@@ -42,6 +42,7 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .rt{display:flex;align-items:center;gap:10px;flex-shrink:0}.del{border:1px solid var(--line);background:var(--s);color:var(--warn);font:600 12px inherit;font-family:inherit;padding:6px 10px;border-radius:8px;cursor:pointer}.del.arm{background:var(--warn);color:#fff;border-color:var(--warn)}
 .stack{display:flex;flex-direction:column;gap:6px;margin-top:10px}.stack .st{margin-top:4px}.stack .btn{margin-top:6px}
 details summary{cursor:pointer;padding:4px 0}
+.sg{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed var(--line);font-size:14px}.sg .rt{flex-direction:column;gap:4px}
 .po{border-top:1px solid var(--line);padding:10px 0}.po .row{margin-top:6px}.po .btn{padding:6px 10px;font-size:13px}
 </style></head><body>
 <header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm / Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
@@ -137,17 +138,17 @@ const rowsHtml=a=>a.map(x=>`<button class="r" data-h="${esc(x[0])}"><span><span 
 
 /* ---- Tính ngày sản xuất từ batch code ---- */
 const BK=b=>fold(b).replace(/[^a-z0-9]/g,'');
-const ELC=new Set(['esteelauder','clinique','origins','mac','maccosmetics','bobbibrown','lamer','smashbox']);
-const LOR=new Set(['kiehls','lancome','urbandecay','pureology']);
-const BBW=new Set(['bathbodyworks','bathandbodyworks']);
+const ELC=new Set(['esteelauder','clinique','origins','mac','maccosmetics','bobbibrown','lamer','smashbox','toofaced','aveda','bumbleandbumble','jomalone','jomalonelondon','drjart','tomford','lelabo','glamglow','darphin','kilian']);
+const LOR=new Set(['kiehls','lancome','urbandecay','pureology','cerave','larocheposay','vichy','garnier','itcosmetics','ysl','yvessaintlaurent','armani','giorgioarmani','maybelline','biotherm','redken','kerastase','shuuemura','loreal','lorealparis','nyx','nyxprofessionalmakeup','essie','matrix','mugler','azzaro','valentino','viktorrolf','ralphlauren','skinceuticals','helenarubinstein']);
+const BBW=new Set(['bathbodyworks','bathandbodyworks','drunkelephant']);const JUL=new Set(['naturium']);
 const LOR_Y='ABCDEFGHJKLMNPRSTVWXYZ';/* A=2004, chu ky 22 nam, bo I O Q U */
 function pickYear(cands,m){const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;const ok=cands.filter(y=>y<cy||(y===cy&&m<=cm));return ok.length?Math.max(...ok):null}
 function decodeBatch(brand,code){const b=BK(brand),c=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');let m,y,rule;
   if(ELC.has(b)){const r=c.match(/^[A-Z0-9]([1-9ABC])(\d)[A-Z0-9]?$/);if(!r)return null;m='123456789ABC'.indexOf(r[1])+1;const d=+r[2];y=pickYear([0,1,2,3].map(k=>2000+d+10*k).filter(x=>x<2040),m);rule='Estée Lauder'}
   else if(LOR.has(b)){const r=c.match(/^\d{2}([A-Z])([1-9OND])[A-Z0-9]{0,5}$/);if(!r)return null;const i=LOR_Y.indexOf(r[1]);if(i<0)return null;m=r[2]==='O'?10:r[2]==='N'?11:r[2]==='D'?12:+r[2];y=pickYear([2004+i,2026+i],m);rule="L'Oréal"}
-  else if(BBW.has(b)){const r=c.match(/^(\d)(\d{3})[A-Z0-9]*$/);if(!r)return null;const doy=+r[2];if(doy<1||doy>366)return null;const d=+r[1];
+  else if(BBW.has(b)||JUL.has(b)){const r=c.match(BBW.has(b)?/^(\d)(\d{3})[A-Z0-9]*$/:/^[A-Z](\d)(\d{3})[A-Z0-9]*$/);if(!r)return null;const doy=+r[2];if(doy<1||doy>366)return null;const d=+r[1];
     const cand=[];for(let yy=2010;yy<2040;yy++)if(yy%10===d)cand.push(yy);const dt=yy=>new Date(yy,0,doy);m=null;
-    const now=new Date();const ok=cand.filter(yy=>dt(yy)<=now);if(!ok.length)return null;y=Math.max(...ok);m=dt(y).getMonth()+1;rule='Bath & Body Works'}
+    const now=new Date();const ok=cand.filter(yy=>dt(yy)<=now);if(!ok.length)return null;y=Math.max(...ok);m=dt(y).getMonth()+1;rule=b==='naturium'?'Naturium':b==='drunkelephant'?'Drunk Elephant':'Bath & Body Works'}
   else return null;
   if(!y)return null;const ex=new Date(y,m-1+36,1);const mo=(new Date().getFullYear()-y)*12+(new Date().getMonth()+1-m);
   return{t:ex.getTime(),mfg:String(m).padStart(2,'0')+'/'+y,exp:String(ex.getMonth()+1).padStart(2,'0')+'/'+ex.getFullYear(),age:mo,rule,expired:ex<=new Date(),soon:!(ex<=new Date())&&(ex-new Date())<183*864e5}}
@@ -272,20 +273,30 @@ function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return
       <input id="nb" list="brandList" autocomplete="off" placeholder="Gõ để tìm hãng, vd: CLINIQUE" required style="text-transform:uppercase" value="${esc(c.ocr?.brand||'')}"><div class="st" id="nbHint"></div>
       <label class="st">Tên sản phẩm + dung tích</label>
       <input id="nn" placeholder="vd: Dramatically 50ml" required value="${esc(c.ocr?.name||'')}">
+      <div id="nSug"></div>
+      <label class="st">Phân loại — màu, mùi hương… (nếu có)</label>
+      <input id="nv" placeholder="vd: Love Hangover / Vanilla" autocomplete="off">
       <div class="st" id="nPrev"></div>
       <div class="st">App sẽ tạo mã HH mới trong sheet HÀNG HÓA, dùng được ngay cho sổ đơn.</div><button class="btn p">Thêm và đếm 1</button></form></details>
     <button class="btn" id="cx">Huỷ</button></div>`;
   const q=$('#sq'),rs=$('#rs');q.oninput=()=>{rs.innerHTML=rowsHtml(search(q.value))};if(!c.ocr)q.focus();
   rs.onclick=e=>{const b=e.target.closest('[data-h]');if(!b)return;const x=S.by[b.dataset.h];choose({hh:x[0],name:x[1],brand:x[2]})};
   $('#nf').onsubmit=e=>{e.preventDefault();const b=$('#nb').value.trim().replace(/\s+/g,' ').toUpperCase();let n=$('#nn').value.trim().replace(/\s+/g,' ');
-    if(fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();if(!b||!n)return st('Nhập đủ hãng và tên sản phẩm.',true);const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='Đang tạo mã hàng…';
+    if(fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();if(!b||!n)return st('Nhập đủ hãng và tên sản phẩm.',true);const v=$('#nv').value.trim().replace(/\s+/g,' ');if(v)n+=' - '+v;const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='Đang tạo mã hàng…';
     run('createItem',S.kho,S.pin,b,n).then(c=>{const x=[c[0],c[1],c[2]];x.f=fold(x.join(' '));x.fb=fold(x[2]);if(!S.by[x[0]]){S.cat.push(x);S.by[x[0]]=x}
       if(!S.brands.some(y=>y.n===b))setBrands(S.brands.map(y=>y.n).concat(b));toast('Đã tạo mã '+c[0]);choose({hh:c[0],name:c[1],brand:c[2]})})
     .catch(x=>{btn.disabled=false;btn.textContent='Thêm và đếm 1';st('Chưa tạo được mã hàng: '+x.message,true)})};
-  const nb=$('#nb'),nn=$('#nn'),prev=()=>{const b=nb.value.trim().toUpperCase(),known=!b||S.brands.some(x=>x.n===b);
+  const nb=$('#nb'),nn=$('#nn'),nv=$('#nv'),sug=$('#nSug'),prev=()=>{const b=nb.value.trim().toUpperCase(),known=!b||S.brands.some(x=>x.n===b);
     $('#nbHint').textContent=known?'':'Hãng mới (chưa có trong danh sách)';
-    let n=nn.value.trim();if(b&&fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();$('#nPrev').textContent=b||n?'Sẽ lưu thành: '+(b&&n?b+' - '+n:(b+' '+n).trim()):''};
-  nb.oninput=prev;nn.oninput=prev;prev();
+    let n=nn.value.trim();if(b&&fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();const v=nv.value.trim();
+    $('#nPrev').textContent=b||n?'Sẽ lưu thành: '+[b,n,v].filter(Boolean).join(' - '):'';
+    const L=(b||n).length?search((b+' '+n).trim()).slice(0,5):[];
+    sug.innerHTML=L.length?'<div class="st">Sản phẩm tương tự đã có — bấm "Chép tên" để sửa lại thành món mới (vd đổi màu, mùi):</div>'+L.map(x=>`<div class="sg"><span>${esc(x[1])}<br><span class="mono" style="color:var(--mut)">${esc(x[0])}</span></span><span class="rt"><button type="button" class="det" data-cp="${esc(x[0])}">Chép tên</button><button type="button" class="det" data-pk="${esc(x[0])}">Đúng món này</button></span></div>`).join(''):''};
+  sug.onclick=e=>{const t=e.target.closest('[data-cp],[data-pk]');if(!t)return;const x=S.by[t.dataset.cp||t.dataset.pk];if(!x)return;
+    if(t.dataset.pk)return choose({hh:x[0],name:x[1],brand:x[2]});
+    const p=x[1].split(/\s+[-–]\s+/);if(p.length>1){nb.value=p[0].trim().toUpperCase();nn.value=p[1].trim();nv.value=p.slice(2).join(' - ')}else{nb.value=x[2]||'';nn.value=x[1]}
+    prev();nv.focus();toast('Đã chép tên — sửa phần khác biệt rồi bấm Thêm')};
+  nb.oninput=prev;nn.oninput=prev;nv.oninput=prev;prev();
   $('#cx').onclick=()=>{S.cur=null;draw()}}
 
 async function choose(it){const bc=S.cur?.bc;S.cur={bc,it};if(bc){S.bc[bc]=[it.hh,it.name,it.brand];run('saveBarcode',S.kho,S.pin,bc,it.hh,it.name,it.brand,S.who).catch(e=>st('Chưa lưu được mã vạch: '+e.message,true))}add(it,1)}
