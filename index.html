@@ -42,10 +42,11 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .rt{display:flex;align-items:center;gap:10px;flex-shrink:0}.del{border:1px solid var(--line);background:var(--s);color:var(--warn);font:600 12px inherit;font-family:inherit;padding:6px 10px;border-radius:8px;cursor:pointer}.del.arm{background:var(--warn);color:#fff;border-color:var(--warn)}
 .stack{display:flex;flex-direction:column;gap:6px;margin-top:10px}.stack .st{margin-top:4px}.stack .btn{margin-top:6px}
 details summary{cursor:pointer;padding:4px 0}
+.odl{border-top:1px dashed var(--line);padding:8px 0}.odl .row{margin-top:4px;flex-wrap:nowrap}.okbox{margin-top:10px;padding:12px;border-radius:10px;background:var(--sunk);text-align:center}.okbox .code{font-size:26px;font-weight:700;margin:6px 0}.chip{font-size:12px;padding:2px 8px;border-radius:10px;background:var(--sunk);white-space:nowrap}.chip.warn{background:var(--warn);color:#fff}.rch{display:flex;justify-content:space-between;font-size:14px;margin:14px 0 4px}textarea{width:100%;box-sizing:border-box;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
 .sg{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed var(--line);font-size:14px}.sg .rt{flex-direction:column;gap:4px}
 .po{border-top:1px solid var(--line);padding:10px 0}.po .row{margin-top:6px}.po .btn{padding:6px 10px;font-size:13px}
 </style></head><body>
-<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm / Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
+<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm / Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="tabOrder">Đơn</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
 <main class="w">
   <section id="loginBox" class="card">
     <div class="eb">Đăng nhập</div>
@@ -61,10 +62,26 @@ details summary{cursor:pointer;padding:4px 0}
     <div class="st">Cách tính: mỗi kho lấy số của lần kiểm gần nhất có đếm món đó (ngày ghi dưới tên), rồi cộng nhập đợt / hàng hoàn / chuyển đến và trừ hàng bán / chuyển đi sau ngày đó (số trong ngoặc).</div></div>
     <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đơn đã gửi, chưa trừ kho</div><button class="btn" id="poRefresh">Làm mới</button></div>
     <div class="st" id="poInfo">Đơn trong sổ đơn hàng có đơn vị vận chuyển — bấm kho đã gửi để trừ tồn. "Không từ kho" cho đơn đặt riêng.</div><div id="poList"></div></div></section>
+  <section id="orders" hidden>
+    <div class="card"><div class="eb">Tạo đơn</div>
+      <div class="row"><select id="odType" style="flex:1"><option value="san">Hàng sẵn (gửi từ kho)</option><option value="order">Đơn order (khách đặt trước)</option></select><select id="odCh" style="flex:1"><option>Facebook</option><option>Shopee</option><option>Khác</option></select></div>
+      <input id="odCust" list="custList" placeholder="Tên khách — gõ để tìm khách cũ" autocomplete="off">
+      <div class="row"><input id="odShip" placeholder="Mã vận đơn (nếu có)" autocomplete="off" style="flex:1;font-family:'IBM Plex Mono';text-transform:uppercase"><label class="btn">Chụp<input type="file" id="odShipPhoto" accept="image/*" capture="environment"></label></div>
+      <div class="st">Thêm món: tìm theo tên hoặc chụp mã vạch</div>
+      <div class="row"><input id="odQ" placeholder="vd: too faced love flush" autocomplete="off" style="flex:1"><label class="btn">Chụp mã vạch<input type="file" id="odPhoto" accept="image/*" capture="environment"></label></div>
+      <div class="res" id="odRs"></div><div id="odLines"></div>
+      <textarea id="odNote" rows="2" placeholder="Ghi chú (địa chỉ, cọc…)"></textarea>
+      <div class="st" id="odTot"></div>
+      <button class="btn p big" id="odSave">Lưu đơn</button><div id="odDone"></div></div>
+    <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đơn tạo trên app (30 ngày)</div><button class="btn" id="odRefresh">Làm mới</button></div><div id="odList"><div class="st">Đang tải…</div></div></div>
+    <div class="card"><div class="row" style="justify-content:space-between"><div class="eb">Đối soát đơn</div><button class="btn" id="rcRun">Kiểm tra</button></div>
+      <div class="st">So đơn (sổ + app) với hàng đã quét xuất bán: đơn chưa xuất, xuất mà không có đơn, xuất lệch món.</div><div id="rcOut"></div></div>
+  </section>
   <section id="app" hidden>
     <div class="card">
-      <div class="row"><label class="st" style="margin:0">Việc</label><select id="mode" style="flex:1"><option value="count">Kiểm kho (đếm tồn)</option><option value="in">Nhập đợt hàng về</option><option value="move">Chuyển sang kho kia</option><option value="ret">Nhận hàng hoàn</option></select></div>
+      <div class="row"><label class="st" style="margin:0">Việc</label><select id="mode" style="flex:1"><option value="count">Kiểm kho (đếm tồn)</option><option value="in">Nhập đợt hàng về</option><option value="move">Chuyển sang kho kia</option><option value="ret">Nhận hàng hoàn</option><option value="out">Xuất bán (đóng gói đơn)</option></select></div>
       <div class="row"><label class="st" style="margin:0">Ngày</label><input type="date" id="day"></div><div class="st" id="modeHint"></div>
+      <div id="ocBox" hidden><div class="row"><input id="oc" placeholder="Mã đơn HD… hoặc mã vận đơn" autocomplete="off" style="flex:1;min-width:120px;font-family:'IBM Plex Mono';text-transform:uppercase"><label class="btn">Chụp mã<input type="file" id="ocPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="ocOk">Chọn</button></div><div id="ocInfo"></div></div>
       <button class="btn p big" id="liveBtn">Quét liên tục bằng camera</button>
       <div id="live" hidden><div class="vwrap"><video id="lvVideo" playsinline muted></video><div class="guide"></div></div><div class="st" id="lvMsg"></div></div>
       <div class="row two"><label class="btn">Chụp ảnh mã vạch<input type="file" id="photo" accept="image/*" capture="environment"></label>
@@ -77,7 +94,7 @@ details summary{cursor:pointer;padding:4px 0}
     <div class="card"><div class="row" style="justify-content:space-between"><div class="eb" id="sumT">Đợt kiểm</div><button class="btn" id="refresh">Làm mới</button></div><div id="sum"><div class="st">Chưa có món nào trong đợt này.</div></div></div>
   </section>
 </main>
-<div class="toast" id="toast" hidden></div><datalist id="brandList"></datalist>
+<div class="toast" id="toast" hidden></div><datalist id="brandList"></datalist><datalist id="custList"></datalist>
 <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';document.head.appendChild(s)"></script>
 <script>
 const $=s=>document.querySelector(s);
@@ -102,11 +119,11 @@ $('#loginBtn').onclick=async()=>{
     setMode('count');
   }catch(e){$('#lst').textContent=e.message||'Không vào được kho.'}
 };
-$('#logout').onclick=()=>{stopLive();showStock(false);S.cur=null;draw();$('#app').hidden=true;$('#stock').hidden=true;$('#tabs').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
+$('#logout').onclick=()=>{stopLive();showStock(false);S.cur=null;draw();$('#app').hidden=true;$('#stock').hidden=true;$('#orders').hidden=true;$('#tabs').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
 $('#day').onchange=e=>{S.day=e.target.value||today();loadSum()};
-S.mode='count';const MODE={count:['Đợt kiểm','Đếm toàn bộ hàng đang có trong kho. Số này thay cho tồn cũ.'],in:['Nhập đợt','Hàng mới về kho này — cộng thêm vào tồn.'],move:['Chuyển kho','Hàng gửi từ kho này sang kho kia — trừ ở đây, cộng bên kia.'],ret:['Hàng hoàn','Hàng khách trả về kho này — cộng thêm vào tồn.']};
-const D=()=>S.mode==='count'?S.day:S.mode+':'+S.day;
-function setMode(m){S.mode=m;$('#mode').value=m;$('#modeHint').textContent=MODE[m][1]+(m==='move'?' (sang '+(S.kho==='hip'?'Kho Đù':'Kho Hip')+')':'');S.cur=null;draw();S.openKey=null;loadSum()}
+S.mode='count';const MODE={count:['Đợt kiểm','Đếm toàn bộ hàng đang có trong kho. Số này thay cho tồn cũ.'],in:['Nhập đợt','Hàng mới về kho này — cộng thêm vào tồn.'],move:['Chuyển kho','Hàng gửi từ kho này sang kho kia — trừ ở đây, cộng bên kia.'],ret:['Hàng hoàn','Hàng khách trả về kho này — cộng thêm vào tồn.'],out:['Xuất bán','Nhập/chụp mã đơn (HD… hoặc mã vận đơn), rồi quét từng món bỏ vào gói — trừ kho này.']};
+const D=()=>S.mode==='count'?S.day:S.mode==='out'?'out:'+S.day+':'+(S.oc||''):S.mode+':'+S.day;
+function setMode(m){S.mode=m;$('#mode').value=m;$('#ocBox').hidden=m!=='out';if(m==='out'){if(!S.ao)loadAO(true);ocShow()}$('#modeHint').textContent=MODE[m][1]+(m==='move'?' (sang '+(S.kho==='hip'?'Kho Đù':'Kho Hip')+')':'');S.cur=null;draw();S.openKey=null;loadSum()}
 $('#mode').onchange=e=>setMode(e.target.value);
 $('#refresh').onclick=loadSum;
 
@@ -215,8 +232,10 @@ $('#photoName').onchange=async e=>{const f=e.target.files[0];e.target.value='';i
     S.cur={bc:S.cur&&!S.cur.it?S.cur.bc:null,it:null,ocr:Object.assign(p,{res})};
     st(res.length?'Đọc được'+(p.brand||p.vol?': '+[p.brand,p.vol].filter(Boolean).join(' · '):'')+'. Chọn đúng sản phẩm bên dưới.':'Chưa khớp sản phẩm nào. Sửa tên rồi bấm Thêm hàng mới, hoặc chụp lại gần hơn.',!res.length);draw()}
   catch(x){st(x.message||'Không đọc được ảnh.',true)}};
-function showStock(on){$('#stock').hidden=!on;$('#app').hidden=on;$('#tabCount').classList.toggle('on',!on);$('#tabStock').classList.toggle('on',on);if(on){stopLive();loadStock()}}
-$('#tabCount').onclick=()=>showStock(false);$('#tabStock').onclick=()=>showStock(true);$('#skRefresh').onclick=()=>loadStock();
+function showTab(t){$('#stock').hidden=t!=='stock';$('#app').hidden=t!=='app';$('#orders').hidden=t!=='orders';$('#tabCount').classList.toggle('on',t==='app');$('#tabStock').classList.toggle('on',t==='stock');$('#tabOrder').classList.toggle('on',t==='orders');
+  if(t!=='app')stopLive();if(t==='stock')loadStock();if(t==='orders')loadOrders()}
+function showStock(on){showTab(on?'stock':'app')}
+$('#tabCount').onclick=()=>showTab('app');$('#tabStock').onclick=()=>showTab('stock');$('#tabOrder').onclick=()=>showTab('orders');$('#skRefresh').onclick=()=>loadStock();
 $('#skQ').oninput=()=>renderStock();$('#skF').onchange=()=>renderStock();
 const dshort=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'—';
 async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';loadPO();try{S.stock=await run('getStock',S.kho,S.pin);renderStock()}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message}}
@@ -305,7 +324,7 @@ let busy=Promise.resolve();
 function add(it,d){S.cur.n=(S.cur.n||0)+d;draw();toast((d>0?'+':'')+d+' · '+it.name.slice(0,40));
   busy=busy.then(()=>run('addCount',S.kho,S.pin,D(),it.hh,it.name,it.brand,d,S.cur?.bc||'',S.who,S.cur?.batch||'').then(renderSum).catch(e=>st('Chưa ghi được: '+e.message,true)))}
 
-function loadSum(){$('#sumT').textContent=MODE[S.mode][0]+' '+S.day.split('-').reverse().join('/');run('getSummary',S.kho,S.pin,D()).then(renderSum).catch(e=>st(e.message,true))}
+function loadSum(){$('#sumT').textContent=MODE[S.mode][0]+(S.mode==='out'?' · '+(S.oc||'chưa chọn đơn'):'')+' '+S.day.split('-').reverse().join('/');if(S.mode==='out'&&!S.oc){renderSum([]);return}run('getSummary',S.kho,S.pin,D()).then(renderSum).catch(e=>st(e.message,true))}
 function totalOf(it){const r=(S.rows||[]).find(r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name));return r?r[3]:0}
 function renderSum(rows){const el=$('#sum');S.rows=rows||[];if($('#tot')&&S.cur&&S.cur.it)$('#tot').textContent=totalOf(S.cur.it);if(!rows||!rows.length){el.innerHTML='<div class="st">Chưa có món nào trong đợt này. Chụp mã vạch hoặc tìm theo tên để bắt đầu.</div>';return}
   const g={};rows.forEach(r=>{(g[r[2]||'CHƯA RÕ HÃNG']=g[r[2]||'CHƯA RÕ HÃNG']||[]).push(r)});let tot=0;rows.forEach(r=>tot+=r[3]);
@@ -331,4 +350,54 @@ $('#sum').onclick=async e=>{const h=e.target.closest('.hsd');if(h){try{navigator
   b.disabled=true;b.textContent='Đang xoá…';
   try{const rows=await run('deleteEntry',S.kho,S.pin,D(),b.dataset.id,b.dataset.t);renderSum(rows);toast('Đã xoá 1 dòng')}
   catch(x){b.disabled=false;b.textContent='Xoá';st('Chưa xoá được: '+x.message,true)}};
+
+/* ===== Xuất bán: chọn mã đơn ===== */
+async function loadAO(quiet){try{S.ao=await run('getAppOrders',S.kho,S.pin,30);if(!quiet)renderAO();ocShow()}catch(e){if(!quiet)$('#odList').innerHTML='<div class="st e">'+esc(e.message)+'</div>'}}
+function findAO(c){c=String(c||'').toUpperCase();return (S.ao||[]).find(o=>o[0].toUpperCase()===c||String(o[5]||'').toUpperCase()===c)}
+function ocShow(){const el=$('#ocInfo');if(!el)return;if(!S.oc){el.innerHTML='<div class="st">Chưa chọn đơn — nhập hoặc chụp mã đơn rồi bấm Chọn.</div>';return}
+  const o=findAO(S.oc);el.innerHTML=o?`<div class="st" style="color:var(--ink)">Đơn app ${esc(o[0])} · ${esc(o[4])} · cần soạn: ${o[9].map(l=>l[3]+' × '+esc(l[1])+(l[2]?' ('+esc(l[2])+')':'')).join('; ')}</div>`:'<div class="st">Đơn '+esc(S.oc)+' (sổ đơn / mã vận đơn) — quét các món trong gói.</div>'}
+$('#ocOk').onclick=()=>{S.oc=$('#oc').value.trim().toUpperCase().replace(/\s+/g,'');ocShow();loadSum();st(S.oc?'Đang xuất bán cho đơn '+S.oc+' — quét từng món.':'Chưa có mã đơn.',!S.oc)};
+$('#oc').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#ocOk').click()}};
+$('#ocPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc mã…');try{const r=await decode(f);if(r){$('#oc').value=r;$('#ocOk').click()}else st('Chưa đọc được mã, gõ tay nhé.',true)}catch(x){st('Không mở được ảnh.',true)}};
+/* ===== Tạo đơn ===== */
+S.od=[];
+async function loadOrders(){if(!S.cust){run('getCustomers',S.kho,S.pin).then(c=>{S.cust=c;$('#custList').innerHTML=c.map(x=>`<option value="${esc(x[1]+' — '+x[0])}">`).join('')}).catch(()=>{})}loadAO()}
+function odDraw(){const L=S.od;let t=0;$('#odLines').innerHTML=L.map((l,i)=>{t+=(+l.price||0)*(+l.qty||0);return `<div class="odl"><div><b>${esc(l.name)}</b> <span class="mono" style="color:var(--mut)">${esc(l.hh||'ngoài danh mục')}</span></div>
+  <div class="row"><input data-i="${i}" data-f="detail" value="${esc(l.detail)}" placeholder="Phân loại: màu, mùi…" style="flex:2;min-width:120px"><input data-i="${i}" data-f="qty" type="number" inputmode="numeric" min="1" value="${l.qty}" style="width:64px"><input data-i="${i}" data-f="price" type="number" inputmode="numeric" value="${l.price||''}" placeholder="Giá" style="width:110px"><button class="del" data-x="${i}">✕</button></div></div>`}).join('');
+  $('#odTot').textContent=L.length?L.length+' món · Tổng '+t.toLocaleString('vi-VN')+'đ':''}
+function odAdd(it){const ex=S.od.find(l=>l.hh&&l.hh===it.hh&&!l.detail);if(ex)ex.qty++;else S.od.push({hh:it.hh||'',name:it.name,detail:it.detail||'',qty:1,price:''});odDraw();$('#odQ').value='';$('#odRs').innerHTML='';toast('+1 '+it.name.slice(0,40))}
+$('#odQ').oninput=()=>{const q=$('#odQ').value.trim();const r=search(q).slice(0,8);$('#odRs').innerHTML=(q?r.map(x=>`<div class="sg"><span>${esc(x[1])}<br><span class="mono" style="color:var(--mut)">${esc(x[0])}</span></span><button type="button" class="det" data-a="${esc(x[0])}">Thêm</button></div>`).join('')+`<div class="sg"><span class="st">Không có trong danh mục?</span><button type="button" class="det" data-free="1">Thêm "${esc(q.slice(0,30))}"</button></div>`:'')};
+$('#odRs').onclick=e=>{const b=e.target.closest('[data-a],[data-free]');if(!b)return;if(b.dataset.free)return odAdd({hh:'',name:$('#odQ').value.trim()});const x=S.by[b.dataset.a];if(x){const p=x[1].split(/\s+[-–]\s+/);odAdd({hh:x[0],name:x[1],detail:''})}};
+$('#odLines').oninput=e=>{const t=e.target;if(t.dataset.i==null)return;S.od[+t.dataset.i][t.dataset.f]=t.dataset.f==='detail'?t.value:+t.value;let s=0;S.od.forEach(l=>s+=(+l.price||0)*(+l.qty||0));$('#odTot').textContent=S.od.length+' món · Tổng '+s.toLocaleString('vi-VN')+'đ'};
+$('#odLines').onclick=e=>{const b=e.target.closest('[data-x]');if(b){S.od.splice(+b.dataset.x,1);odDraw()}};
+$('#odPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;toast('Đang đọc mã vạch…');try{const r=await decode(f);if(!r)return toast('Chưa đọc được mã vạch');const m=S.bc[r];if(!m)return toast('Mã '+r+' chưa gán sản phẩm — tìm theo tên');const x=S.by[m[0]];odAdd({hh:m[0],name:x?x[1]:m[1]})}catch(x){toast('Không mở được ảnh')}};
+$('#odShipPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const r=await decode(f);if(r)$('#odShip').value=r;else toast('Chưa đọc được mã')}catch(x){}};
+$('#odSave').onclick=async()=>{const raw=$('#odCust').value.trim();if(!raw)return toast('Nhập tên khách');if(!S.od.length)return toast('Đơn chưa có món');
+  const m=raw.match(/^(.*?)\s+—\s+(KH-\d+)$/);const o={type:$('#odType').value,ch:$('#odCh').value,cust:m?m[1]:raw,khCode:m?m[2]:'',ship:$('#odShip').value.trim(),note:$('#odNote').value.trim(),who:S.who,lines:S.od.map(l=>({hh:l.hh,name:l.name,detail:l.detail,qty:+l.qty||1,price:+l.price||0}))};
+  const b=$('#odSave');b.disabled=true;b.textContent='Đang lưu…';
+  try{const r=await run('createOrder',S.kho,S.pin,o);$('#odDone').innerHTML=`<div class="okbox">Đã lưu đơn<div class="code mono">${esc(r.code)}</div><span class="st">Ghi mã này lên gói hàng.</span> <button class="det" data-cp="${esc(r.code)}">Chép mã</button></div>`;
+    S.od=[];odDraw();['#odCust','#odShip','#odNote','#odQ'].forEach(x=>$(x).value='');loadAO()}
+  catch(x){toast('Chưa lưu được: '+x.message)}finally{b.disabled=false;b.textContent='Lưu đơn'}};
+$('#odDone').onclick=e=>{const b=e.target.closest('[data-cp]');if(b){try{navigator.clipboard.writeText(b.dataset.cp)}catch(x){}toast('Đã chép '+b.dataset.cp)}};
+function renderAO(){const L=S.ao||[];$('#odList').innerHTML=L.length?L.map(o=>{const done=o[8]==='Đã gửi'||o[8]==='Đã giao'||o[8]==='Huỷ';
+  return `<div class="po"><div><b class="mono">${esc(o[0])}</b> · ${dshort(o[1])} · ${esc(o[3])} · ${esc(o[4])} <span class="chip ${done?'':'warn'}">${esc(o[8])}${o[10]?' ('+esc(o[10])+')':''}</span></div>
+  <div class="st">${esc(o[2])}${o[5]?' · vận đơn '+esc(o[5]):''}${o[6]?' · '+esc(o[6]):''}</div>${o[9].map(l=>`<div class="st" style="color:var(--ink)">${l[3]} × ${esc(l[1])}${l[2]?' — '+esc(l[2]):''}${l[4]?' · '+l[4].toLocaleString('vi-VN')+'đ':''}</div>`).join('')}
+  <div class="row">${o[8]==='Chờ gửi'?`<button class="btn" data-sc="${esc(o[0])}">Quét khi đóng gói</button><button class="btn" data-sh="${esc(o[0])}">Trừ kho cả đơn</button>`:''}${o[8]==='Chờ hàng'?`<button class="btn" data-st="Đã giao" data-c="${esc(o[0])}">Đã giao</button>`:''}${!done?`<button class="btn t" data-st="Huỷ" data-c="${esc(o[0])}">Huỷ</button>`:''}<button class="btn t" data-cp="${esc(o[0])}">Chép mã</button></div></div>`}).join(''):'<div class="st">Chưa có đơn nào.</div>'}
+$('#odRefresh').onclick=()=>loadAO();
+$('#odList').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.cp){try{navigator.clipboard.writeText(b.dataset.cp)}catch(x){}return toast('Đã chép '+b.dataset.cp)}
+  if(b.dataset.sc){S.oc=b.dataset.sc;$('#oc').value=S.oc;showTab('app');setMode('out');return}
+  if(b.dataset.sh){if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Trừ ở '+(S.kho==='hip'?'Kho Hip':'Kho Đù')+'?';return}
+    b.disabled=true;try{S.ao=await run('shipOrder',S.kho,S.pin,b.dataset.sh,S.who);renderAO();toast('Đã trừ kho đơn '+b.dataset.sh)}catch(x){toast(x.message);b.disabled=false}return}
+  if(b.dataset.st){if(b.dataset.st==='Huỷ'&&!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Chắc huỷ?';return}
+    b.disabled=true;try{S.ao=await run('setOrderStatus',S.kho,S.pin,b.dataset.c,b.dataset.st);renderAO()}catch(x){toast(x.message);b.disabled=false}}};
+/* ===== Đối soát ===== */
+$('#rcRun').onclick=async()=>{const el=$('#rcOut');el.innerHTML='<div class="st">Đang đối soát…</div>';
+  try{const r=await run('getReconcile',S.kho,S.pin);const po=await run('getPendingOrders',S.kho,S.pin).catch(()=>[]);const pc=[...new Set(po.map(x=>x[2]))];
+    const sec=(t,a,f)=>`<h3 class="rch">${t} <span>${a.length}</span></h3>`+(a.length?a.map(f).join(''):'<div class="st">Không có.</div>');
+    el.innerHTML=sec('Đơn app hàng sẵn chưa xuất kho',r.notOut,x=>`<div class="po"><b class="mono">${esc(x[0])}</b> · ${dshort(x[1])} · ${esc(x[2])} · ${esc(x[3])}<div class="st">${esc(x[4])}</div></div>`)
+      +sec('Đơn trong sổ đã gửi, chưa trừ kho',pc,x=>`<div class="po mono">${esc(x)}</div>`)+(pc.length?'<div class="st">Xử lý ở tab Tồn kho → "Đơn đã gửi, chưa trừ kho".</div>':'')
+      +sec('Đã xuất kho nhưng không thấy đơn',r.noOrder,x=>`<div class="po"><b class="mono">${esc(x[0])}</b> · ${dshort(x[1])} · ${esc(x[2])}<div class="st">${esc(x[3])}</div></div>`)
+      +sec('Xuất lệch món so với đơn',r.diff,x=>`<div class="po"><b class="mono">${esc(x[0])}</b> · ${dshort(x[1])} · ${esc(x[2])}<div class="st">${esc(x[3])}</div></div>`)}
+  catch(x){el.innerHTML='<div class="st e">'+esc(x.message)+'</div>'}};
 </script></body></html>
