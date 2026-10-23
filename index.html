@@ -7,7 +7,8 @@
 .w{max-width:640px;margin:0 auto;padding:0 16px 40px}
 header{position:sticky;top:0;background:var(--s);border-bottom:1px solid var(--line);z-index:5}
 header .w{padding-block:12px;display:flex;flex-direction:column;gap:8px}
-h1{margin:0;font-size:19px;font-weight:800}h1 span{color:var(--acc)}
+h1{margin:0;font-size:19px;font-weight:800}input::placeholder,textarea::placeholder{text-transform:none;font-family:"Be Vietnam Pro",system-ui,sans-serif}
+@media (max-width:560px){input,select,textarea{font-size:16px}#hdrRow{flex-direction:column;align-items:stretch!important;gap:8px}#tabs{width:100%}#tabs .btn{flex:1;padding:7px 4px}#tabs #tabHelp{flex:0 0 40px}}h1 span{color:var(--acc)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-width:0}
 .btn{border:1px solid var(--line);background:var(--s);color:var(--ink);font:600 14px inherit;font-family:inherit;padding:10px 14px;border-radius:10px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center;position:relative;overflow:hidden}
@@ -20,12 +21,12 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .eb{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 .mono{font-family:"IBM Plex Mono",monospace;font-size:12px}
 .qty{display:flex;gap:10px;align-items:center}.qty button:not(.btn){width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--s);font-size:20px}
-.qty b{font:700 22px "IBM Plex Mono";min-width:3ch;text-align:center}
+.qty b{font:700 22px "IBM Plex Mono",ui-monospace,monospace;min-width:3ch;text-align:center}
 .res{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto}
 .r{display:flex;justify-content:space-between;gap:8px;text-align:left;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--s);font:inherit;color:inherit;width:100%}
 .r .b{font-size:11px;font-weight:700;color:var(--teal)}
 .grp h3{margin:14px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);display:flex;justify-content:space-between}
-.ln{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px dashed var(--line)}.ln b{font-family:"IBM Plex Mono"}
+.ln{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px dashed var(--line)}.ln b{font-family:"IBM Plex Mono",ui-monospace,monospace}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600}
 [hidden]{display:none!important}
 .vwrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3}.vwrap video{width:100%;height:100%;object-fit:cover;display:block}
@@ -33,7 +34,7 @@ input,select{font:inherit;color:var(--ink);background:var(--s);border:1px solid 
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.two .btn{padding:12px 8px}
 .xp{color:#b3261e;font-weight:700}.sn{color:var(--warn);font-weight:700}.okd{color:var(--teal);font-weight:600}
 .tot{font-size:14px}.tot b{font:700 18px 'IBM Plex Mono',monospace;color:var(--teal)}
-.tabs{display:flex;gap:6px}.tabs .btn{padding:6px 10px;font-size:12px}.tabs .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tabs{display:flex;gap:6px}.tabs .btn{padding:7px 10px;font-size:13px;white-space:nowrap;min-height:36px}.tabs .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .sk{display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);font-size:14px}
 .sk .n{font-family:'IBM Plex Mono',monospace;text-align:right;min-width:2.5ch}.sk .n.t{font-weight:700;color:var(--teal)}.skh{font-size:11px;color:var(--mut);font-weight:700;text-transform:uppercase}
 .chip{border:1px solid var(--line);background:var(--s);font:600 13px 'IBM Plex Mono',monospace;padding:6px 10px;border-radius:8px;cursor:pointer}.r .mono{white-space:nowrap}.hsd{font-size:12px;color:var(--teal);font-weight:600}
@@ -48,7 +49,7 @@ details summary{cursor:pointer;padding:4px 0}
 .ckl{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}.ckl .rt{display:flex;gap:6px;align-items:center}.ckl.ok{color:var(--mut)}.ckl.ok b{color:var(--ink)}
 .po{border-top:1px solid var(--line);padding:10px 0}.po .row{margin-top:6px}.po .btn{padding:6px 10px;font-size:13px}
 </style></head><body>
-<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm / Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="tabOrder">Đơn</button><button class="btn" id="tabHelp" title="Hướng dẫn">?</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
+<header><div class="w"><h1>Kiểm kho <span>Pretty Pigs</span></h1><div class="row" id="hdrRow" style="justify-content:space-between;flex-wrap:nowrap"><div class="st" id="hdr">Đăng nhập kho để bắt đầu</div><div class="tabs" id="tabs" hidden><button class="btn on" id="tabCount">Đếm/Nhập</button><button class="btn" id="tabStock">Tồn kho</button><button class="btn" id="tabOrder">Đơn</button><button class="btn" id="tabHelp" title="Hướng dẫn">?</button><button class="btn" id="logout">Đổi kho</button></div></div></div></header>
 <main class="w">
   <section id="loginBox" class="card">
     <div class="eb">Đăng nhập</div>
@@ -78,16 +79,17 @@ details summary{cursor:pointer;padding:4px 0}
     <details><summary>Sửa khi quét nhầm</summary><ol><li>Trong danh sách đợt đang làm, bấm <b>Chi tiết</b> ở món bị nhầm.</li><li>Bấm <b>Xoá</b> ở dòng sai → bấm lần nữa để xác nhận.</li></ol></details>
     <details><summary>Tồn kho & hạn sử dụng</summary><ul><li>Tab <b>Tồn kho</b>: tồn tổng Hip + Đù, tìm theo tên/hãng/mã HH.</li><li>Lọc <b>Sắp hết hạn</b> để xem hàng còn ≤ 6 tháng hoặc đã hết hạn; ưu tiên bán batch cũ trước.</li><li>Số trong ngoặc là phần nhập/xuất phát sinh sau lần kiểm gần nhất.</li></ul></details>
     <details><summary>Đơn trong sổ đã gửi, chưa trừ kho</summary><ol><li>Tab <b>Tồn kho</b> → mục này liệt kê đơn trong sổ đơn đã có đơn vị vận chuyển nhưng chưa trừ kho.</li><li>Bấm kho đã gửi (Hip/Đù) để trừ tồn, hoặc "Không từ kho" cho đơn order.</li></ol></details>
-    <details><summary>Tạo đơn trên app</summary><ol><li>Tab <b>Đơn</b> → chọn Hàng sẵn hoặc Order, chọn kênh.</li><li>Gõ tên khách (app gợi ý khách cũ), nhập/chụp mã vận đơn nếu là Shopee.</li><li>Thêm món: tìm tên, chụp mã vạch, hoặc thêm món ngoài danh mục; điền phân loại, SL, giá.</li><li>Bấm <b>Lưu đơn</b> → app cấp mã HD nối tiếp sổ. Ghi mã lên gói hàng.</li><li>Đơn lưu vào sheet "Đơn app"; khi ngồi máy tính chép sang sổ đơn, giữ nguyên mã HD.</li></ol></details>
+    <details><summary>Tạo đơn trên app</summary><ol><li>Tab <b>Đơn</b> → chọn <b>Ngày đơn</b> (mặc định hôm nay, chọn lại nếu nhập đơn của ngày trước — mã HD theo ngày này), chọn Hàng sẵn hoặc Order, chọn kênh.</li><li>Gõ tên khách (app gợi ý khách cũ), nhập/chụp mã vận đơn nếu là Shopee.</li><li>Thêm món: tìm tên, chụp mã vạch, hoặc thêm món ngoài danh mục; điền phân loại, SL, giá.</li><li>Bấm <b>Lưu đơn</b> → app cấp mã HD nối tiếp sổ. Ghi mã lên gói hàng.</li><li>Đơn lưu vào sheet "Đơn app"; khi ngồi máy tính chép sang sổ đơn, giữ nguyên mã HD.</li></ol></details>
     <details><summary>Xuất bán (đóng gói hàng sẵn)</summary><ol><li>Ở đơn Chờ gửi bấm <b>Quét khi đóng gói</b> (hoặc Việc: Xuất bán, nhập/chụp mã HD hay mã vận đơn).</li><li>Quét từng món bỏ vào gói — trừ ở kho đang đăng nhập; app hiện các món cần soạn.</li><li>Không cần quét từng món: bấm <b>Trừ kho cả đơn</b> (bấm 2 lần để xác nhận kho).</li><li>Đơn trong sổ (không tạo trên app) cũng xuất được bằng mã HD hoặc mã vận đơn.</li></ol></details>
     <details><summary>Kiểm hàng order</summary><ol><li>Hàng order về: ở đơn Chờ hàng bấm <b>Kiểm hàng</b>.</li><li>Quét mã vạch hoặc bấm + cho từng món; xem kỹ phân loại. App báo nếu món quét không có trong đơn.</li><li>Đủ hết thì bấm <b>Đủ hàng — Đã giao</b>. Bước này không trừ kho; tiến độ được nhớ trên máy nếu kiểm dở.</li></ol></details>
     <details><summary>Đối soát</summary><ol><li>Tab <b>Đơn</b> → Đối soát đơn → <b>Kiểm tra</b>.</li><li>Xem 4 nhóm: đơn app chưa xuất kho · đơn sổ đã gửi chưa trừ kho · hàng đã xuất không khớp đơn · đơn xuất lệch số lượng.</li><li>Xử lý từng dòng rồi kiểm tra lại đến khi trống.</li></ol></details>
   </div></section>
   <section id="orders" hidden>
     <div class="card"><div class="eb">Tạo đơn</div>
-      <div class="row"><select id="odType" style="flex:1"><option value="san">Hàng sẵn (gửi từ kho)</option><option value="order">Đơn order (khách đặt trước)</option></select><select id="odCh" style="flex:1"><option>Facebook</option><option>Shopee</option><option>Khác</option></select></div>
+      <div class="row"><label class="st" style="margin:0">Ngày đơn</label><input type="date" id="odDate" style="flex:1"></div>
+      <div class="row"><select id="odType" style="flex:1"><option value="san">Hàng sẵn</option><option value="order">Order (đặt trước)</option></select><select id="odCh" style="flex:1"><option>Facebook</option><option>Shopee</option><option>Khác</option></select></div>
       <input id="odCust" list="custList" placeholder="Tên khách — gõ để tìm khách cũ" autocomplete="off">
-      <div class="row"><input id="odShip" placeholder="Mã vận đơn (nếu có)" autocomplete="off" style="flex:1;font-family:'IBM Plex Mono';text-transform:uppercase"><label class="btn">Chụp<input type="file" id="odShipPhoto" accept="image/*" capture="environment"></label></div>
+      <div class="row"><input id="odShip" placeholder="Mã vận đơn (nếu có)" autocomplete="off" style="flex:1;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase"><label class="btn">Chụp<input type="file" id="odShipPhoto" accept="image/*" capture="environment"></label></div>
       <div class="st">Thêm món: tìm theo tên hoặc chụp mã vạch</div>
       <div class="row"><input id="odQ" placeholder="vd: too faced love flush" autocomplete="off" style="flex:1"><label class="btn">Chụp mã vạch<input type="file" id="odPhoto" accept="image/*" capture="environment"></label></div>
       <div class="res" id="odRs"></div><div id="odLines"></div>
@@ -103,12 +105,12 @@ details summary{cursor:pointer;padding:4px 0}
     <div class="card">
       <div class="row"><label class="st" style="margin:0">Việc</label><select id="mode" style="flex:1"><option value="count">Kiểm kho (đếm tồn)</option><option value="in">Nhập đợt hàng về</option><option value="move">Chuyển sang kho kia</option><option value="ret">Nhận hàng hoàn</option><option value="out">Xuất bán (đóng gói đơn)</option></select></div>
       <div class="row"><label class="st" style="margin:0">Ngày</label><input type="date" id="day"></div><div class="st" id="modeHint"></div>
-      <div id="ocBox" hidden><div class="row"><input id="oc" placeholder="Mã đơn HD… hoặc mã vận đơn" autocomplete="off" style="flex:1;min-width:120px;font-family:'IBM Plex Mono';text-transform:uppercase"><label class="btn">Chụp mã<input type="file" id="ocPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="ocOk">Chọn</button></div><div id="ocInfo"></div></div>
+      <div id="ocBox" hidden><div class="row"><input id="oc" placeholder="Mã đơn HD… hoặc mã vận đơn" autocomplete="off" style="flex:1;min-width:120px;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase"><label class="btn">Chụp mã<input type="file" id="ocPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="ocOk">Chọn</button></div><div id="ocInfo"></div></div>
       <button class="btn p big" id="liveBtn">Quét liên tục bằng camera</button>
       <div id="live" hidden><div class="vwrap"><video id="lvVideo" playsinline muted></video><div class="guide"></div></div><div class="st" id="lvMsg"></div></div>
       <div class="row two"><label class="btn">Chụp ảnh mã vạch<input type="file" id="photo" accept="image/*" capture="environment"></label>
       <label class="btn t">Chụp tên sản phẩm<input type="file" id="photoName" accept="image/*" capture="environment"></label></div>
-      <form class="row" id="cf"><input id="code" inputmode="numeric" placeholder="Nhập hoặc quét mã vạch" style="flex:1;font-family:'IBM Plex Mono'"><button class="btn">Tìm</button></form>
+      <form class="row" id="cf"><input id="code" inputmode="numeric" placeholder="Nhập hoặc quét mã vạch" style="flex:1;font-family:'IBM Plex Mono',ui-monospace,monospace"><button class="btn">Tìm</button></form>
       <button class="btn t" id="byName">Hàng không có mã vạch? Tìm theo tên</button>
       <div class="st" id="st">Chụp mã vạch, hoặc chụp mặt trước hộp (thấy rõ tên hãng, tên sản phẩm, dung tích).</div>
       <div id="cur"></div>
@@ -294,7 +296,7 @@ function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return
   if(c.it){box.innerHTML=`<div class="card hit"><div class="eb">${esc(c.it.brand||'')}${c.bc?' · <span class="mono">'+esc(c.bc)+'</span>':''}</div><div><b>${esc(c.it.name)}</b></div><div class="mono">${esc(c.it.hh||'Hàng mới')}</div>
     <div class="tot">Tổng ${S.mode==='count'?'đã đếm trong đợt':MODE[S.mode][0].toLowerCase()+' hôm nay'}: <b id="tot">${totalOf(c.it)}</b></div><div class="st">Số vừa bấm cho món này — bấm + / − nếu đếm nhiều cái</div><div class="qty"><button id="m">−</button><b id="q">+${c.n||1}</b><button id="p">+</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
     <div class="st" style="margin-top:4px">Batch code (in/dập dưới đáy hộp)${c.batch?' · đã lưu: <b class="mono">'+esc(c.batch)+'</b>':''}</div>
-    <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono';text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><label class="btn">Chụp<input type="file" id="btPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="btSave">Lưu</button></div>
+    <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><label class="btn">Chụp<input type="file" id="btPhoto" accept="image/*" capture="environment"></label><button class="btn p" id="btSave">Lưu</button></div>
     <div class="st" id="btDec"></div><div class="row" id="btChips">${(c.btChips||[]).map(t=>`<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`;
     $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>add(c.it,1);$('#x').onclick=()=>{S.cur={bc:c.bc,it:null};draw()};
     const showDec=()=>{const v=$('#bt').value.trim();const d=v&&decodeBatch(c.it.brand,v);$('#btDec').innerHTML=!v?'':d?`<span class="${d.expired?'xp':d.soon?'sn':'okd'}">Ngày sản xuất ${d.mfg} · HSD ước tính ${d.exp} (36 tháng, theo quy tắc ${esc(d.rule)})</span>`:'Chưa có quy tắc tự tính cho hãng/mã này — dùng nút Tra HSD trong danh sách.'};
@@ -383,19 +385,21 @@ $('#oc').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#ocOk').click()
 $('#ocPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;st('Đang đọc mã…');try{const r=await decode(f);if(r){$('#oc').value=r;$('#ocOk').click()}else st('Chưa đọc được mã, gõ tay nhé.',true)}catch(x){st('Không mở được ảnh.',true)}};
 /* ===== Tạo đơn ===== */
 S.od=[];
-async function loadOrders(){if(!S.cust){run('getCustomers',S.kho,S.pin).then(c=>{S.cust=c;$('#custList').innerHTML=c.map(x=>`<option value="${esc(x[1]+' — '+x[0])}">`).join('')}).catch(()=>{})}loadAO()}
+async function loadOrders(){const od=$('#odDate');od.max=today();if(!od.value)od.value=today();if(!S.cust){run('getCustomers',S.kho,S.pin).then(c=>{S.cust=c;$('#custList').innerHTML=c.map(x=>`<option value="${esc(x[1]+' — '+x[0])}">`).join('')}).catch(()=>{})}loadAO()}
 function odDraw(){const L=S.od;let t=0;$('#odLines').innerHTML=L.map((l,i)=>{t+=(+l.price||0)*(+l.qty||0);return `<div class="odl"><div><b>${esc(l.name)}</b> <span class="mono" style="color:var(--mut)">${esc(l.hh||'ngoài danh mục')}</span></div>
-  <div class="row"><input data-i="${i}" data-f="detail" value="${esc(l.detail)}" placeholder="Phân loại: màu, mùi…" style="flex:2;min-width:120px"><input data-i="${i}" data-f="qty" type="number" inputmode="numeric" min="1" value="${l.qty}" style="width:64px"><input data-i="${i}" data-f="price" type="number" inputmode="numeric" value="${l.price||''}" placeholder="Giá" style="width:110px"><button class="del" data-x="${i}">✕</button></div></div>`}).join('');
-  $('#odTot').textContent=L.length?L.length+' món · Tổng '+t.toLocaleString('vi-VN')+'đ':''}
+  <div class="row"><input data-i="${i}" data-f="detail" value="${esc(l.detail)}" placeholder="Phân loại: màu, mùi… (nếu có)" style="flex:1"><button class="del" data-x="${i}" title="Bỏ món">✕</button></div>
+  <div class="row"><label class="st" style="margin:0">SL</label><input data-i="${i}" data-f="qty" type="number" inputmode="numeric" min="1" value="${l.qty}" style="width:64px"><label class="st" style="margin:0 0 0 6px">Giá</label><input data-i="${i}" data-f="price" type="number" inputmode="numeric" value="${l.price||''}" placeholder="vd: 450000" style="flex:1;min-width:0"><span class="st" style="margin:0">đ</span></div></div>`}).join('');
+  $('#odTot').textContent=L.length?odTotTxt(L):''}
+const odTotTxt=L=>{let s=0,q=0;L.forEach(l=>{s+=(+l.price||0)*(+l.qty||0);q+=(+l.qty||0)});return L.length+' món · '+q+' sp · '+(s?'Tổng '+s.toLocaleString('vi-VN')+'đ':'chưa nhập giá')}
 function odAdd(it){const ex=S.od.find(l=>l.hh&&l.hh===it.hh&&!l.detail);if(ex)ex.qty++;else S.od.push({hh:it.hh||'',name:it.name,detail:it.detail||'',qty:1,price:''});odDraw();$('#odQ').value='';$('#odRs').innerHTML='';toast('+1 '+it.name.slice(0,40))}
 $('#odQ').oninput=()=>{const q=$('#odQ').value.trim();const r=search(q).slice(0,8);$('#odRs').innerHTML=(q?r.map(x=>`<div class="sg"><span>${esc(x[1])}<br><span class="mono" style="color:var(--mut)">${esc(x[0])}</span></span><button type="button" class="det" data-a="${esc(x[0])}">Thêm</button></div>`).join('')+`<div class="sg"><span class="st">Không có trong danh mục?</span><button type="button" class="det" data-free="1">Thêm "${esc(q.slice(0,30))}"</button></div>`:'')};
 $('#odRs').onclick=e=>{const b=e.target.closest('[data-a],[data-free]');if(!b)return;if(b.dataset.free)return odAdd({hh:'',name:$('#odQ').value.trim()});const x=S.by[b.dataset.a];if(x){const p=x[1].split(/\s+[-–]\s+/);odAdd({hh:x[0],name:x[1],detail:''})}};
-$('#odLines').oninput=e=>{const t=e.target;if(t.dataset.i==null)return;S.od[+t.dataset.i][t.dataset.f]=t.dataset.f==='detail'?t.value:+t.value;let s=0;S.od.forEach(l=>s+=(+l.price||0)*(+l.qty||0));$('#odTot').textContent=S.od.length+' món · Tổng '+s.toLocaleString('vi-VN')+'đ'};
+$('#odLines').oninput=e=>{const t=e.target;if(t.dataset.i==null)return;S.od[+t.dataset.i][t.dataset.f]=t.dataset.f==='detail'?t.value:+t.value;$('#odTot').textContent=odTotTxt(S.od)};
 $('#odLines').onclick=e=>{const b=e.target.closest('[data-x]');if(b){S.od.splice(+b.dataset.x,1);odDraw()}};
 $('#odPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;toast('Đang đọc mã vạch…');try{const r=await decode(f);if(!r)return toast('Chưa đọc được mã vạch');const m=S.bc[r];if(!m)return toast('Mã '+r+' chưa gán sản phẩm — tìm theo tên');const x=S.by[m[0]];odAdd({hh:m[0],name:x?x[1]:m[1]})}catch(x){toast('Không mở được ảnh')}};
 $('#odShipPhoto').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const r=await decode(f);if(r)$('#odShip').value=r;else toast('Chưa đọc được mã')}catch(x){}};
 $('#odSave').onclick=async()=>{const raw=$('#odCust').value.trim();if(!raw)return toast('Nhập tên khách');if(!S.od.length)return toast('Đơn chưa có món');
-  const m=raw.match(/^(.*?)\s+—\s+(KH-\d+)$/);const o={type:$('#odType').value,ch:$('#odCh').value,cust:m?m[1]:raw,khCode:m?m[2]:'',ship:$('#odShip').value.trim(),note:$('#odNote').value.trim(),who:S.who,lines:S.od.map(l=>({hh:l.hh,name:l.name,detail:l.detail,qty:+l.qty||1,price:+l.price||0}))};
+  const m=raw.match(/^(.*?)\s+—\s+(KH-\d+)$/);const o={d:$('#odDate').value||today(),type:$('#odType').value,ch:$('#odCh').value,cust:m?m[1]:raw,khCode:m?m[2]:'',ship:$('#odShip').value.trim(),note:$('#odNote').value.trim(),who:S.who,lines:S.od.map(l=>({hh:l.hh,name:l.name,detail:l.detail,qty:+l.qty||1,price:+l.price||0}))};
   const b=$('#odSave');b.disabled=true;b.textContent='Đang lưu…';
   try{const r=await run('createOrder',S.kho,S.pin,o);$('#odDone').innerHTML=`<div class="okbox">Đã lưu đơn<div class="code mono">${esc(r.code)}</div><span class="st">Ghi mã này lên gói hàng.</span> <button class="det" data-cp="${esc(r.code)}">Chép mã</button></div>`;
     S.od=[];odDraw();['#odCust','#odShip','#odNote','#odQ'].forEach(x=>$(x).value='');loadAO()}
