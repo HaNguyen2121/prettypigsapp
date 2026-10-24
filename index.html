@@ -345,7 +345,7 @@ $('#byName').onclick=()=>{S.cur={bc:null,it:null};draw()};
 
 function lookup(raw){const bc=String(raw||'').replace(/\s+/g,'');if(!bc)return;$('#code').value='';
   const m=S.bc[bc];if(m){const it=S.by[m[0]]?{hh:m[0],name:S.by[m[0]][1],brand:S.by[m[0]][2]}:{hh:m[0],name:m[1],brand:m[2]};S.cur={bc,it};prefill(S.cur);st('Đã nhận mã '+bc);add(it,1)}
-  else{S.cur={bc,it:null};st('Mã '+bc+' chưa có trong sổ. Chọn sản phẩm một lần, lần sau quét là tự nhận.');draw()}}
+  else{const pv=S.cur&&S.cur.it;S.cur={bc,it:null,pv:pv&&!bcOf(pv)?pv:null};st('Mã '+bc+' chưa có trong sổ. Chọn sản phẩm một lần, lần sau quét là tự nhận.');draw()}}
 
 function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return}
   if(c.it){box.innerHTML=`<div class="card hit"><div class="eb">${esc(c.it.brand||'')}${c.bc?' · <span class="mono">'+esc(c.bc)+'</span>':''}</div><div><b>${esc(c.it.name)}</b></div><div class="mono">${esc(c.it.hh||'Hàng mới')}</div>
@@ -364,7 +364,7 @@ function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return
       const old=c.batch||'';c.batch=v;c.btDraft=undefined;S.lastB[c.it.hh||c.it.name]=v;if(!(c.btChips||[]).includes(v))c.btChips=[v].concat(c.btChips||[]);if(c.u>0&&old&&old!==v){enq(c.it,-c.u,old);enq(c.it,c.u,v)}else enq(c.it,0,v);draw();toast('Đã lưu batch '+v)};
     return}
   box.innerHTML=`<div class="card new"><div class="eb">${c.bc?'Mã vạch mới <span class="mono">'+esc(c.bc)+'</span> — chọn sản phẩm':'Tìm theo tên hoặc hãng'}</div>
-    <input id="sq" placeholder="vd: clinique dramatically 50ml"><div class="res" id="rs">${c.ocr?rowsHtml(c.ocr.res):''}</div>
+    ${c.bc&&c.pv?`<button class="btn p" id="pvB" style="width:100%;margin-bottom:6px">Gán mã này cho món vừa đếm: ${esc(c.pv.name.slice(0,48))}</button>`:''}<input id="sq" placeholder="${c.bc?'vd: clinique dramatically 50ml':'tên/hãng, hoặc gõ mã vạch rồi Enter'}"><div class="res" id="rs">${c.ocr?rowsHtml(c.ocr.res):''}</div>
     <details${c.ocr&&!c.ocr.res.length?' open':''}><summary class="st">Không có trong danh mục? Thêm hàng mới</summary><form id="nf" class="stack">
       <label class="st">Hãng — chọn hãng có sẵn hoặc gõ hãng mới</label>
       <input id="nb" list="brandList" autocomplete="off" placeholder="Gõ để tìm hãng, vd: CLINIQUE" required style="text-transform:uppercase" value="${esc(c.ocr?.brand||'')}"><div class="st" id="nbHint"></div>
@@ -376,7 +376,8 @@ function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return
       <div class="st" id="nPrev"></div>
       <div class="st">App sẽ tạo mã HH mới trong sheet HÀNG HÓA, dùng được ngay cho sổ đơn.</div><button class="btn p">Thêm và đếm 1</button></form></details>
     <button class="btn" id="cx">Hủy</button></div>`;
-  const q=$('#sq'),rs=$('#rs');q.oninput=()=>{rs.innerHTML=rowsHtml(search(q.value))};if(!c.ocr)q.focus();
+  const q=$('#sq'),rs=$('#rs');q.oninput=()=>{rs.innerHTML=rowsHtml(search(q.value))};q.onkeydown=e=>{const v=q.value.replace(/\s+/g,'');if(e.key==='Enter'&&/^\d{8,14}$/.test(v)){e.preventDefault();lookup(v)}};
+  if($('#pvB'))$('#pvB').onclick=()=>{const it=c.pv,bc=c.bc;S.bc[bc]=[it.hh,it.name,it.brand];run('saveBarcode',S.kho,S.pin,bc,it.hh,it.name,it.brand,S.who).then(()=>toast('Đã gán mã '+bc)).catch(e=>st('Chưa lưu được mã vạch: '+e.message,true));S.cur={bc,it};prefill(S.cur);draw();st('Đã gán mã '+bc+' cho '+it.name+' — không cộng thêm số.')};if(!c.ocr)q.focus();
   rs.onclick=e=>{const b=e.target.closest('[data-h]');if(!b)return;const x=S.by[b.dataset.h];choose({hh:x[0],name:x[1],brand:x[2]})};
   $('#nf').onsubmit=e=>{e.preventDefault();const b=$('#nb').value.trim().replace(/\s+/g,' ').toUpperCase();let n=$('#nn').value.trim().replace(/\s+/g,' ');
     if(fold(n).startsWith(fold(b)+' '))n=n.slice(b.length).trim();if(!b||!n)return st('Nhập đủ hãng và tên sản phẩm.',true);const v=$('#nv').value.trim().replace(/\s+/g,' ');if(v)n+=' - '+v;const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='Đang tạo mã hàng…';
@@ -415,9 +416,10 @@ function svTxt(){const n=S.Q.reduce((s,x)=>s+Math.abs(x.q),0)+S.fl;return n?'⏳
 function svShow(){const t=svTxt();['#svSt','#svAll'].forEach(k=>{const e=$(k);if(e)e.textContent=t})}
 function bump(it,d,b){const k=it.hh||('new:'+(it.brand||'')+' '+it.name);let r=(S.rows||[]).find(r=>rk(r)===k);if(!r){r=[it.hh||'',it.name,it.brand||'',0,S.who,'',0];S.rows=(S.rows||[]).concat([r])}
   r[3]+=d;if(b&&!String(r[5]||'').split(', ').includes(b))r[5]=r[5]?r[5]+', '+b:b;if(d){const q=parseBq(r[7]);q[b||'']=(q[b||'']||0)+d;r[7]=bqStr(q)}renderSum(S.rows,1)}
+function bcOf(it){const c=S.cur;if(c&&c.bc&&c.it&&(c.it.hh||c.it.name)===(it.hh||it.name))return c.bc;if(!it.hh)return '';for(const k in S.bc)if(S.bc[k][0]===it.hh)return k;return ''}
 function enq(it,d,b){b=b||'';const day=D(),k=it.hh||('new:'+(it.brand||'')+' '+it.name);
   let x=S.Q.find(x=>x.kho===S.kho&&x.day===day&&x.k===k&&(x.batch===b||!b||(!x.batch&&!d)));
-  if(x){x.q+=d;if(b)x.batch=b}else S.Q.push({kho:S.kho,pin:S.pin,day,k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:d,bc:S.cur?.bc||'',batch:b,who:S.who});
+  const bc=bcOf(it);if(x){x.q+=d;if(b)x.batch=b;if(!x.bc)x.bc=bc}else S.Q.push({kho:S.kho,pin:S.pin,day,k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:d,bc,batch:b,who:S.who});
   bump(it,d,b);svShow();clearTimeout(S.qT);S.qT=setTimeout(flush,1500)}
 async function flush(){clearTimeout(S.qT);if(S.fl||!S.Q.length)return;const items=S.Q.filter(x=>x.q||x.batch);S.Q=[];if(!items.length)return;S.fl=items.length;svShow();
   const g={};items.forEach(x=>(g[x.kho+'|'+x.day]=g[x.kho+'|'+x.day]||[]).push(x));let last=null;
