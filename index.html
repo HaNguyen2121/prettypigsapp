@@ -291,14 +291,14 @@ function billText(o){const L=o[9],d=String(o[1]||''),ord=o[2]==='Order',t=aoTota
 async function copyTxt(t,msg){try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(x){}a.remove()}toast(msg||'Đã chép')}
 async function shareTxt(t){if(navigator.share){try{await navigator.share({text:t})}catch(e){}}else copyTxt(t,'Đã chép bill — dán vào tin nhắn cho khách')}
 const billBtns=k=>`<button class="btn p" data-bl="${esc(k)}">Chép bill</button>`+(navigator.share?`<button class="btn" data-sb="${esc(k)}">Gửi bill…</button>`:'');
-async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';loadPO();try{S.stock=await run('getStock',S.kho,S.pin);renderStock()}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message}}
+async function loadStock(){$('#skInfo').textContent='Đang tải tồn kho…';$('#poList').innerHTML='<div class="st">Đang tải đơn…</div>';try{const p=await run('getStockPack',S.kho,S.pin);S.stock=p.stock;renderStock();renderPO(p.po)}catch(e){$('#skInfo').textContent='Chưa tải được: '+e.message;$('#poList').innerHTML=''}}
 async function loadPO(){$('#poList').innerHTML='<div class="st">Đang tải đơn…</div>';try{renderPO(await run('getPendingOrders',S.kho,S.pin))}catch(e){$('#poList').innerHTML='<div class="st e">Chưa tải được: '+esc(e.message)+'</div>'}}
 function renderPO(rows){S.po=rows||[];const g={};S.po.forEach(r=>(g[r[2]]=g[r[2]]||[]).push(r));const ks=Object.keys(g).sort((a,b)=>g[b][0][1].localeCompare(g[a][0][1]));
   $('#poList').innerHTML=ks.length?`<div class="st">${ks.length} đơn chưa trừ kho</div>`+ks.slice(0,60).map(k=>{const a=g[k];return `<div class="po"><div><b class="mono">${esc(k)}</b> · ${dshort(a[0][1])} · ${esc(a[0][3])}<span class="mono" style="color:var(--mut)"> · ${esc(a[0][8])}${a[0][9]&&a[0][9]!=='Done'?' '+esc(a[0][9]):''}</span></div>${a.map(r=>`<div class="st" style="color:var(--ink)">${r[7]} × ${esc(r[5])}${r[6]?' — '+esc(r[6]):''}</div>`).join('')}<div class="row"><button class="btn" data-o="${esc(k)}" data-to="hip">Gửi từ Hip</button><button class="btn" data-o="${esc(k)}" data-to="du">Gửi từ Đù</button><button class="btn t" data-o="${esc(k)}" data-to="skip">Không từ kho</button></div></div>`}).join('')+(ks.length>60?'<div class="st">Đang hiện 60 đơn mới nhất.</div>':''):'<div class="st">Không còn đơn nào chưa trừ kho.</div>'}
 $('#poRefresh').onclick=loadPO;
 $('#poList').onclick=async e=>{const b=e.target.closest('[data-o]');if(!b)return;const keys=S.po.filter(r=>r[2]===b.dataset.o).map(r=>r[0]);
   b.closest('.po').querySelectorAll('button').forEach(x=>x.disabled=true);b.textContent='Đang ghi…';
-  try{renderPO(await run('assignOrder',S.kho,S.pin,keys,b.dataset.to,S.who));toast(b.dataset.to==='skip'?'Đã bỏ qua đơn '+b.dataset.o:'Đã trừ kho đơn '+b.dataset.o);S.stock=await run('getStock',S.kho,S.pin);renderStock()}
+  try{renderPO(await run('assignOrder',S.kho,S.pin,keys,b.dataset.to,S.who));toast(b.dataset.to==='skip'?'Đã bỏ qua đơn '+b.dataset.o:'Đã trừ kho đơn '+b.dataset.o);loadStock()}
   catch(x){toast('Chưa ghi được: '+x.message);loadPO()}};
 function renderStock(){const rows=S.stock||[];const q=fold($('#skQ').value).split(/\s+/).filter(Boolean);
   const fx=$('#skF').value;let nx=0,ns=0;rows.forEach(r=>{if(r[3]+r[5]<=0)return;const d=expOf(r);if(d&&d.expired)nx++;else if(d&&d.soon)ns++});
@@ -537,7 +537,7 @@ $('#ckScan').onclick=()=>{if(!S.ck)return;startLive({title:'Kiểm hàng '+S.ck.
   if(i<0){try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}return ovLog('⚠ '+(m[1]||m[0])+' KHÔNG có trong đơn',1)}ckHit(i);const g=S.ck.got[i]||0;ovLog('✓ '+L[i][1]+' '+Math.min(g,L[i][3])+'/'+L[i][3])}})};
 /* ===== Đối soát ===== */
 $('#rcRun').onclick=async()=>{const el=$('#rcOut');el.innerHTML='<div class="st">Đang đối soát…</div>';
-  try{const r=await run('getReconcile',S.kho,S.pin);const po=await run('getPendingOrders',S.kho,S.pin).catch(()=>[]);const pc=[...new Set(po.map(x=>x[2]))];
+  try{const r=await run('getReconcile',S.kho,S.pin);const pc=r.po||[];
     const sec=(t,a,f)=>`<h3 class="rch">${t} <span>${a.length}</span></h3>`+(a.length?a.map(f).join(''):'<div class="st">Không có.</div>');
     el.innerHTML=sec('Đơn app hàng sẵn chưa xuất kho',r.notOut,x=>`<div class="po"><b class="mono">${esc(x[0])}</b> · ${dshort(x[1])} · ${esc(x[2])} · ${esc(x[3])}<div class="st">${esc(x[4])}</div></div>`)
       +sec('Đơn trong sổ đã gửi, chưa trừ kho',pc,x=>`<div class="po mono">${esc(x)}</div>`)+(pc.length?'<div class="st">Xử lý ở tab Tồn kho → "Đơn đã gửi, chưa trừ kho".</div>':'')
