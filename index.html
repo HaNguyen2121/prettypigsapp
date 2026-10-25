@@ -347,21 +347,21 @@ function lookup(raw){const bc=String(raw||'').replace(/\s+/g,'');if(!bc)return;$
   const m=S.bc[bc];if(m){const it=S.by[m[0]]?{hh:m[0],name:S.by[m[0]][1],brand:S.by[m[0]][2]}:{hh:m[0],name:m[1],brand:m[2]};S.cur={bc,it};prefill(S.cur);st('Đã nhận mã '+bc);add(it,1)}
   else{const pv=S.cur&&S.cur.it;S.cur={bc,it:null,pv:pv&&!bcOf(pv)?pv:null};st('Mã '+bc+' chưa có trong sổ. Chọn sản phẩm một lần, lần sau quét là tự nhận.');draw()}}
 
-function draw(){const box=$('#cur');const c=S.cur;if(!c){box.innerHTML='';return}
+function draw(){const box=$('#cur');const c=S.cur;if(S.Q.length&&!S.fl){clearTimeout(S.qT);S.qT=setTimeout(flush,1500)}if(!c){box.innerHTML='';return}
   if(c.it){box.innerHTML=`<div class="card hit"><div class="eb">${esc(c.it.brand||'')}${c.bc?' · <span class="mono">'+esc(c.bc)+'</span>':''}</div><div><b>${esc(c.it.name)}</b></div><div class="mono">${esc(c.it.hh||'Hàng mới')}</div>
     <div class="tot">${S.mode==='count'?'Đã đếm trong đợt':MODE[S.mode][0]+' hôm nay'}: <b id="tot">${totalOf(c.it)}</b> <span class="st" id="svSt">${svTxt()}</span></div>
     <div class="qty"><button id="m" title="Bớt 1">−</button><input id="qn" type="number" inputmode="numeric" min="1" placeholder="1" style="width:64px;text-align:center"><button class="btn p" id="p">+ Cộng</button><button class="btn" id="x" style="margin-left:auto;white-space:nowrap">Đổi sản phẩm</button></div>
     <div class="st">Quét lại món này = +1. Nhiều cái giống nhau: gõ số vào ô rồi bấm + Cộng.</div>
     <div class="st" style="margin-top:4px">Batch code (in/dập dưới đáy hộp) — lưu batch <b>không</b> cộng thêm số lượng${c.batch?' · đã lưu: <b class="mono">'+esc(c.batch)+'</b>':''}</div>
     <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><button class="btn p" id="btSave">Lưu</button><button class="btn" id="btCam" type="button" title="Quét batch bằng camera">📷 Quét batch</button></div>${(c.btChips||[]).length?(S.mode==='out'?'<div class="st">Chọn lô đang lấy ra — xếp theo HSD, lô trên cùng hết hạn sớm nhất (FIFO):</div>'+(c.batch?'':'<div class="st e">Chưa chọn lô cho món này</div>'):'<div class="st">Bấm 1 lần để chọn batch:</div>'):''}
-    <div class="st" id="btDec"></div><div class="row" id="btChips"${S.mode==='out'?' style="flex-direction:column;align-items:stretch"':''}>${(c.btChips||[]).map((t,i)=>`<button class="chip${t===c.batch?' on':''}" data-t="${esc(t)}">${t===c.batch?'✓ ':''}${bLabel(c.it.brand,t,i)}</button>`).join('')}</div></div>`;
+    ${(()=>{const r=(S.rows||[]).find(r=>rk(r)===(c.it.hh||('new:'+(c.it.brand||'')+' '+c.it.name))),n=r?(parseBq(r[7])['']||0):0;return n>0?`<div class="pk warn" style="margin:6px 0">Còn ${n} cái chưa rõ lô. ${c.batch?`<button class="btn p" id="bFix" type="button">Gán lô ${esc(c.batch)} cho ${n} cái này</button>`:'Chọn lô bên dưới — app sẽ gán lô cho số này.'}</div>`:''})()}<div class="st" id="btDec"></div><div class="row" id="btChips"${S.mode==='out'?' style="flex-direction:column;align-items:stretch"':''}>${(c.btChips||[]).map((t,i)=>`<button class="chip${t===c.batch?' on':''}" data-t="${esc(t)}">${t===c.batch?'✓ ':''}${bLabel(c.it.brand,t,i)}</button>`).join('')}</div></div>`;
     $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>{const v=$('#qn').value.trim(),n=v?Math.round(+v):1;if(!(n>=1&&n<=999))return st('Nhập số lượng từ 1 đến 999.',true);add(c.it,n)};$('#qn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#p').click()}};$('#x').onclick=()=>{S.cur={bc:c.bc,it:null};draw()};
     const showDec=()=>{const v=$('#bt').value.trim();const d=v&&decodeBatch(c.it.brand,v);$('#btDec').innerHTML=!v?'':d?`<span class="${d.expired?'xp':d.soon?'sn':'okd'}">Ngày sản xuất ${d.mfg} · HSD ước tính ${d.exp} (36 tháng, theo quy tắc ${esc(d.rule)})</span>`:'Chưa có quy tắc tự tính cho hãng/mã này — dùng nút Tra HSD trong danh sách.'};
     $('#bt').oninput=e=>{c.btDraft=e.target.value;showDec()};showDec();
     $('#btChips').onclick=e=>{const t=e.target.closest('.chip');if(t){$('#bt').value=t.dataset.t;$('#btSave').click()}};
-    $('#btCam').onclick=()=>startBatch(c);
+    $('#btCam').onclick=()=>startBatch(c);if($('#bFix'))$('#bFix').onclick=()=>{relabel(c.it,'',c.batch,0);draw();toast('Đang gán lô '+c.batch)};
     $('#btSave').onclick=()=>{const v=$('#bt').value.trim().toUpperCase().replace(/\s+/g,'');if(!v)return st('Nhập batch code trước.',true);
-      const old=c.batch||'';c.batch=v;c.btDraft=undefined;S.lastB[c.it.hh||c.it.name]=v;if(!(c.btChips||[]).includes(v))c.btChips=[v].concat(c.btChips||[]);if(c.u>0&&old&&old!==v){enq(c.it,-c.u,old);enq(c.it,c.u,v)}else enq(c.it,0,v);draw();toast('Đã lưu batch '+v)};
+      const old=c.batch||'';c.batch=v;c.btDraft=undefined;S.lastB[c.it.hh||c.it.name]=v;if(!(c.btChips||[]).includes(v))c.btChips=[v].concat(c.btChips||[]);relabel(c.it,old,v,c.u||0);draw();toast('Đã lưu batch '+v)};
     return}
   box.innerHTML=`<div class="card new"><div class="eb">${c.bc?'Mã vạch mới <span class="mono">'+esc(c.bc)+'</span> — chọn sản phẩm':'Tìm theo tên hoặc hãng'}</div>
     ${c.bc&&c.pv?`<button class="btn p" id="pvB" style="width:100%;margin-bottom:6px">Gán mã này cho món vừa đếm: ${esc(c.pv.name.slice(0,48))}</button>`:''}<input id="sq" placeholder="${c.bc?'vd: clinique dramatically 50ml':'tên/hãng, hoặc gõ mã vạch rồi Enter'}"><div class="res" id="rs">${c.ocr?rowsHtml(c.ocr.res):''}</div>
@@ -412,22 +412,28 @@ function bcCands(t,brand){const W=String(t||'').toUpperCase().replace(/[^A-Z0-9\
   return ok.map(w=>[decodeBatch(brand,w)?0:1,J.has(w)?1:0,w.length,w]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]).slice(0,6).map(x=>x[3])}
 /* Hàng đợi ghi: gom các lần quét trong ~1,5 giây thành 1 dòng/món, batch ghi chung dòng số lượng */
 S.Q=[];S.fl=0;
-function svTxt(){const n=S.Q.reduce((s,x)=>s+Math.abs(x.q),0)+S.fl;return n?'⏳ đang lưu…':'✓ đã lưu'}
+function svTxt(){const n=S.Q.reduce((s,x)=>s+Math.abs(x.q)+(x.from?1:0),0)+S.fl;return !n?'✓ đã lưu':!S.fl&&S.Q.every(held)?'⏳ chờ chọn lô — tự lưu sau 30 giây':'⏳ đang lưu…'}
 function svShow(){const t=svTxt();['#svSt','#svAll'].forEach(k=>{const e=$(k);if(e)e.textContent=t})}
 function bump(it,d,b){const k=it.hh||('new:'+(it.brand||'')+' '+it.name);let r=(S.rows||[]).find(r=>rk(r)===k);if(!r){r=[it.hh||'',it.name,it.brand||'',0,S.who,'',0];S.rows=(S.rows||[]).concat([r])}
   r[3]+=d;if(b&&!String(r[5]||'').split(', ').includes(b))r[5]=r[5]?r[5]+', '+b:b;if(d){const q=parseBq(r[7]);q[b||'']=(q[b||'']||0)+d;r[7]=bqStr(q)}renderSum(S.rows,1)}
 function bcOf(it){const c=S.cur;if(c&&c.bc&&c.it&&(c.it.hh||c.it.name)===(it.hh||it.name))return c.bc;if(!it.hh)return '';for(const k in S.bc)if(S.bc[k][0]===it.hh)return k;return ''}
+function relabel(it,old,v,u){const k=it.hh||('new:'+(it.brand||'')+' '+it.name),r=(S.rows||[]).find(r=>rk(r)===k);
+  if(old&&old!==v&&u>0){let left=u;S.Q.filter(x=>x.k===k&&x.batch===old&&x.q>0).forEach(x=>{if(left>0){x.batch=v;left-=x.q}});
+    if(left>0)S.Q.push({kho:S.kho,pin:S.pin,day:D(),k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:0,bc:bcOf(it),batch:v,from:old,n:left,who:S.who,t:Date.now()});
+    if(r){const q=parseBq(r[7]);q[old]=(q[old]||0)-u;q[v]=(q[v]||0)+u;r[7]=bqStr(q)}clearTimeout(S.qT);S.qT=setTimeout(flush,1500);svShow();renderSum(S.rows,1);return}
+  if(r){const q=parseBq(r[7]),m=q['']||0;if(m>0){q['']=0;q[v]=(q[v]||0)+m;r[7]=bqStr(q)}}enq(it,0,v)}
 function enq(it,d,b){b=b||'';const day=D(),k=it.hh||('new:'+(it.brand||'')+' '+it.name);
   let x=S.Q.find(x=>x.kho===S.kho&&x.day===day&&x.k===k&&(x.batch===b||!b||(!x.batch&&!d)));
-  const bc=bcOf(it);if(x){x.q+=d;if(b)x.batch=b;if(!x.bc)x.bc=bc}else S.Q.push({kho:S.kho,pin:S.pin,day,k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:d,bc,batch:b,who:S.who});
+  const bc=bcOf(it);if(x){x.q+=d;if(b)x.batch=b;if(!x.bc)x.bc=bc}else S.Q.push({kho:S.kho,pin:S.pin,day,k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:d,bc,batch:b,who:S.who,t:Date.now()});
   bump(it,d,b);svShow();clearTimeout(S.qT);S.qT=setTimeout(flush,1500)}
-async function flush(){clearTimeout(S.qT);if(S.fl||!S.Q.length)return;const items=S.Q.filter(x=>x.q||x.batch);S.Q=[];if(!items.length)return;S.fl=items.length;svShow();
+function held(x){const c=S.cur;return c&&c.it&&x.q>0&&!x.batch&&!x.from&&x.k===(c.it.hh||('new:'+(c.it.brand||'')+' '+c.it.name))&&Date.now()-(x.t||0)<30000}
+async function flush(force){clearTimeout(S.qT);if(S.fl||!S.Q.length)return;const keep=force===true?[]:S.Q.filter(held);const items=S.Q.filter(x=>!keep.includes(x)&&(x.q||x.batch));S.Q=keep;if(keep.length)S.qT=setTimeout(flush,3000);if(!items.length)return;S.fl=items.length;svShow();
   const g={};items.forEach(x=>(g[x.kho+'|'+x.day]=g[x.kho+'|'+x.day]||[]).push(x));let last=null;
-  try{for(const key of Object.keys(g)){const a=g[key];const rows=await run('addCounts',a[0].kho,a[0].pin,a[0].day,a.map(x=>({hh:x.hh,name:x.name,brand:x.brand,q:x.q,bc:x.bc,batch:x.batch,who:x.who})));delete g[key];if(a[0].day===D()&&a[0].kho===S.kho)last=rows}
+  try{for(const key of Object.keys(g)){const a=g[key];const rows=await run('addCounts',a[0].kho,a[0].pin,a[0].day,a.map(x=>({hh:x.hh,name:x.name,brand:x.brand,q:x.q,bc:x.bc,batch:x.batch,who:x.who,from:x.from||'',n:x.n||0})));delete g[key];if(a[0].day===D()&&a[0].kho===S.kho)last=rows}
     S.fl=0;if(S.Q.length)S.qT=setTimeout(flush,300);else if(last)renderSum(last);svShow()}
   catch(e){S.Q=Object.values(g).flat().concat(S.Q);S.fl=0;svShow();st('Chưa ghi được: '+e.message+' — app sẽ tự thử lại.',true);toast('⚠ Chưa lưu được, đang thử lại…');try{navigator.vibrate&&navigator.vibrate([200,80,200])}catch(x){}S.qT=setTimeout(flush,4000)}}
-document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});
-window.addEventListener('beforeunload',e=>{if(S.Q.length||S.fl){flush();e.preventDefault();e.returnValue=''}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)flush(true)});
+window.addEventListener('beforeunload',e=>{if(S.Q.length||S.fl){flush(true);e.preventDefault();e.returnValue=''}});
 function mvWarn(it){if(S.mode!=='move'&&S.mode!=='recv')return;const r=(S.rows||[]).find(r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name));if(r&&r[6]>0){setTimeout(()=>toast('⚠ Kho kia đã ghi chuyển '+r[6]+' cái món này hôm nay — kiểm tra kẻo ghi 2 lần'),300);try{navigator.vibrate&&navigator.vibrate([150,80,150])}catch(e){}}}
 function add(it,d){if(d>0)mvWarn(it);if(S.mode==='out'&&!S.oc){st('Chọn đơn trước (quét mã vận đơn hoặc gõ mã HD) rồi mới quét món.',true);toast('⚠ Chưa chọn đơn');return}if(d>0)ocWarn(it,d);if(d<0&&totalOf(it)+d<0)return st('Món này chưa có số để bớt.',true);S.cur.u=(S.cur.u||0)+d;enq(it,d,S.cur?.batch||'');draw();toast((d>0?'+':'')+d+' · '+it.name.slice(0,40)+' → '+totalOf(it))}
 
