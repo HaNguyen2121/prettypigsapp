@@ -135,7 +135,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fold=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
 const LS={g(k){try{return localStorage.getItem(k)}catch(e){return null}},s(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-let S={kho:LS.g('kho')||'hip',pin:LS.g('pin')||'',who:LS.g('who')||'',day:today(),cat:[],by:{},bc:{},cur:null};
+let S={kho:LS.g('kho')||'hip',pin:LS.g('pin')||'',who:LS.g('who')||'',day:today(),dayAuto:today(),cat:[],by:{},bc:{},cur:null};
 const API='https://script.google.com/macros/s/AKfycbyHm--q-8fsDMc4ZSg67ZOfUiMyqWAwLKVuCvZ_XPuH_2er2RLI7em7FsbeFYbdKTtYnA/exec';
 const run=async(fn,...a)=>{let last;for(let i=0;i<3;i++){try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:a})});const j=await r.json();if(!j.ok)throw Object.assign(new Error(j.error),{app:true});return j.data}catch(e){if(e.app)throw e;last=e;await new Promise(z=>setTimeout(z,800*(i+1)))}}throw new Error('Mất kết nối, thử lại nhé.')};
 function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,1500)}
@@ -153,7 +153,7 @@ $('#loginBtn').onclick=async()=>{
   }catch(e){$('#lst').textContent=e.message||'Không vào được kho.'}
 };
 $('#logout').onclick=()=>{flush();stopLive();showStock(false);S.cur=null;draw();$('#app').hidden=true;$('#stock').hidden=true;$('#orders').hidden=true;$('#help').hidden=true;$('#tabs').hidden=true;$('#loginBox').hidden=false;$('#hdr').textContent='Đăng nhập kho để bắt đầu';$('#lst').textContent=''};
-$('#day').onchange=e=>{S.day=e.target.value||today();$('#ucCard').hidden=true;loadSum()};
+$('#day').onchange=e=>{S.day=e.target.value||today();S.dayAuto=S.day===today()?S.day:null;$('#ucCard').hidden=true;loadSum()};
 S.mode='count';const MODE={count:['Đợt kiểm','Đếm toàn bộ hàng đang có trong kho. Số này thay cho tồn cũ. Đếm sang hôm sau thì giữ ngày bắt đầu đợt.'],in:['Nhập đợt','Hàng mới về kho này — cộng thêm vào tồn.'],move:['Chuyển kho','Hàng gửi từ kho này sang kho kia — trừ ở đây, cộng bên kia.'],recv:['Nhận chuyển kho','Hàng chuyển từ kho kia về kho này — cộng ở đây, trừ bên kia.'],ret:['Hàng hoàn','Hàng khách trả về kho này — cộng thêm vào tồn.'],out:['Xuất bán','Quét mã vận đơn hoặc nhập mã HD, rồi quét từng món bỏ vào gói — trừ kho này.']};
 const D=()=>S.mode==='count'?S.day:S.mode==='out'?'out:'+S.day+':'+(S.oc||''):S.mode+':'+S.day;
 function setMode(m){S.mode=m;if(!S.stock&&!S.stockP)S.stockP=run('getStock',S.kho,S.pin).then(x=>{S.stock=x;if(S.cur&&S.cur.it&&!S.cur.batch){prefill(S.cur);draw()}}).catch(()=>{S.stockP=null});$('#mode').value=m;$('#ocBox').hidden=m!=='out';$('#ucBtn').hidden=m!=='count';if(m!=='count')$('#ucCard').hidden=true;if(m==='out'){if(!S.ao)loadAO(true);if(!S.po)run('getPendingOrders',S.kho,S.pin).then(p=>{S.po=p;ocShow()}).catch(()=>{S.po=[]});ocShow()}$('#modeHint').textContent=MODE[m][1]+(m==='move'?' (sang '+(S.kho==='hip'?'Kho Đù':'Kho Hip')+')':m==='recv'?' (từ '+(S.kho==='hip'?'Kho Đù':'Kho Hip')+' về '+(S.kho==='hip'?'Kho Hip':'Kho Đù')+')':'');S.cur=null;draw();S.openKey=null;loadSum()}
@@ -355,7 +355,7 @@ function draw(){const box=$('#cur');const c=S.cur;if(S.Q.length&&!S.fl){clearTim
     <div class="st" style="margin-top:4px">Batch code (in/dập dưới đáy hộp) — lưu batch <b>không</b> cộng thêm số lượng${c.batch?' · đã lưu: <b class="mono">'+esc(c.batch)+'</b>':''}</div>
     <div class="row"><input id="bt" placeholder="vd: A12" autocomplete="off" style="flex:1;min-width:90px;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase" value="${esc(c.btDraft??c.batch??'')}"><button class="btn p" id="btSave">Lưu</button><button class="btn" id="btCam" type="button" title="Quét batch bằng camera">📷 Quét batch</button></div>${(c.btChips||[]).length?(S.mode==='out'?'<div class="st">Chọn lô đang lấy ra — xếp theo HSD, lô trên cùng hết hạn sớm nhất (FIFO):</div>'+(c.batch?'':'<div class="st e">Chưa chọn lô cho món này</div>'):'<div class="st">Bấm 1 lần để chọn batch:</div>'):''}
     ${(()=>{const r=(S.rows||[]).find(r=>rk(r)===(c.it.hh||('new:'+(c.it.brand||'')+' '+c.it.name))),n=r?(parseBq(r[7])['']||0):0;return n>0?`<div class="pk warn" style="margin:6px 0">Còn ${n} cái chưa rõ lô. ${c.batch?`<button class="btn p" id="bFix" type="button">Gán lô ${esc(c.batch)} cho ${n} cái này</button>`:'Chọn lô bên dưới — app sẽ gán lô cho số này.'}</div>`:''})()}<div class="st" id="btDec"></div><div class="row" id="btChips"${S.mode==='out'?' style="flex-direction:column;align-items:stretch"':''}>${(c.btChips||[]).map((t,i)=>`<button class="chip${t===c.batch?' on':''}" data-t="${esc(t)}">${t===c.batch?'✓ ':''}${bLabel(c.it.brand,t,i)}</button>`).join('')}</div></div>`;
-    $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>{const v=$('#qn').value.trim(),n=v?Math.round(+v):1;if(!(n>=1&&n<=999))return st('Nhập số lượng từ 1 đến 999.',true);add(c.it,n)};$('#qn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#p').click()}};$('#x').onclick=()=>{S.cur={bc:c.bc,it:null};draw()};
+    $('#m').onclick=()=>add(c.it,-1);$('#p').onclick=()=>{const v=$('#qn').value.trim(),n=v?Math.round(+v):1;if(!(n>=1&&n<=999))return st('Nhập số lượng từ 1 đến 999.',true);add(c.it,n)};$('#qn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#p').click()}};$('#x').onclick=()=>{undoCard(c);S.cur={bc:c.bc,it:null};draw()};
     const showDec=()=>{const v=$('#bt').value.trim();const d=v&&decodeBatch(c.it.brand,v);$('#btDec').innerHTML=!v?'':d?`<span class="${d.expired?'xp':d.soon?'sn':'okd'}">Ngày sản xuất ${d.mfg} · HSD ước tính ${d.exp} (36 tháng, theo quy tắc ${esc(d.rule)})</span>`:'Chưa có quy tắc tự tính cho hãng/mã này — dùng nút Tra HSD trong danh sách.'};
     $('#bt').oninput=e=>{c.btDraft=e.target.value;showDec()};showDec();
     $('#btChips').onclick=e=>{const t=e.target.closest('.chip');if(t){$('#bt').value=t.dataset.t;$('#btSave').click()}};
@@ -403,8 +403,8 @@ let busy=Promise.resolve();
 /* Batch: nhớ batch vừa dùng cho từng món; gợi ý batch đã có trong kho; xuất kho tự chọn batch cũ nhất */
 S.lastB={};
 function knownB(it){const same=r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name);const st=(S.stock||[]).find(same),cur=(S.rows||[]).find(same);
-  const q=st&&st[11]?parseBq(st[11]):{};S.bqNow=q;let L=batchList(it.brand,st?st[7]:'').map(x=>x.bc);if(S.mode==='out')L=L.filter(b=>(q[b]||0)>0).concat(L.filter(b=>!((q[b]||0)>0)));const C=cur&&cur[5]?String(cur[5]).split(', ').filter(Boolean):[];return [...new Set(S.mode==='out'?L.concat(C):C.concat(L))]}
-function prefill(c){if(!c||!c.it)return;const k=c.it.hh||c.it.name,L=knownB(c.it);c.btChips=L;if(!c.batch)c.batch=S.lastB[k]||''}
+  const bi=S.kho==='hip'?12:13,q=st?parseBq(st[bi]!==undefined?st[bi]:st[11]):{};S.bqNow=q;let L=batchList(it.brand,st?st[7]:'').map(x=>x.bc);if(S.mode==='out')L=L.filter(b=>(q[b]||0)>0).concat(L.filter(b=>!((q[b]||0)>0)));const C=cur&&cur[5]?String(cur[5]).split(', ').filter(Boolean):[];return [...new Set(S.mode==='out'?L.concat(C):C.concat(L))]}
+function prefill(c){if(!c||!c.it)return;const k=c.it.hh||c.it.name,L=knownB(c.it);c.btChips=L;if(!c.batch)c.batch=S.mode==='out'?(L.find(b=>((S.bqNow||{})[b]||0)>0)||''):(S.lastB[k]||'')}
 function bLabel(brand,t,i){const d=decodeBatch(brand,t),q=(S.bqNow||{})[t];return esc(t)+(d?' · HSD~'+d.exp:'')+(q>0?' · còn '+q:q!==undefined&&S.mode==='out'?' · hết?':'')+(S.mode==='out'&&i===0&&q>0?' · lấy trước':'')}
 function bcCands(t,brand){const W=String(t||'').toUpperCase().replace(/[^A-Z0-9\s]/g,' ').split(/\s+/).filter(Boolean),o=[];
   const J=new Set(),U=/^(ML|G|OZ|FL|MG|KG|L|FLOZ)$/;W.forEach((w,i)=>{if(W[i+1]&&U.test(W[i+1]))return;o.push(w);if(W[i+1]&&(w+W[i+1]).length<=11){o.push(w+W[i+1]);if(w!=='LOT')J.add(w+W[i+1])}});
@@ -417,26 +417,34 @@ function svShow(){const t=svTxt();['#svSt','#svAll'].forEach(k=>{const e=$(k);if
 function bump(it,d,b){const k=it.hh||('new:'+(it.brand||'')+' '+it.name);let r=(S.rows||[]).find(r=>rk(r)===k);if(!r){r=[it.hh||'',it.name,it.brand||'',0,S.who,'',0];S.rows=(S.rows||[]).concat([r])}
   r[3]+=d;if(b&&!String(r[5]||'').split(', ').includes(b))r[5]=r[5]?r[5]+', '+b:b;if(d){const q=parseBq(r[7]);q[b||'']=(q[b||'']||0)+d;r[7]=bqStr(q)}renderSum(S.rows,1)}
 function bcOf(it){const c=S.cur;if(c&&c.bc&&c.it&&(c.it.hh||c.it.name)===(it.hh||it.name))return c.bc;if(!it.hh)return '';for(const k in S.bc)if(S.bc[k][0]===it.hh)return k;return ''}
-function relabel(it,old,v,u){const k=it.hh||('new:'+(it.brand||'')+' '+it.name),r=(S.rows||[]).find(r=>rk(r)===k);
-  if(old&&old!==v&&u>0){let left=u;S.Q.filter(x=>x.k===k&&x.batch===old&&x.q>0).forEach(x=>{if(left>0){x.batch=v;left-=x.q}});
-    if(left>0)S.Q.push({kho:S.kho,pin:S.pin,day:D(),k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:0,bc:bcOf(it),batch:v,from:old,n:left,who:S.who,t:Date.now()});
-    if(r){const q=parseBq(r[7]);q[old]=(q[old]||0)-u;q[v]=(q[v]||0)+u;r[7]=bqStr(q)}clearTimeout(S.qT);S.qT=setTimeout(flush,1500);svShow();renderSum(S.rows,1);toast('Đã đổi sang lô '+v);return}
-  const m=r?(parseBq(r[7])['']||0):0,pend=S.Q.some(x=>x.k===k&&!x.batch&&x.q>0);if(!m&&!pend){toast('Đã chọn lô '+v+' — lần đếm tiếp theo sẽ ghi vào lô này');return}
-  if(r&&m>0){const q=parseBq(r[7]);q['']=0;q[v]=(q[v]||0)+m;r[7]=bqStr(q)}enq(it,0,v);toast('Đã gán lô '+v)}
-function enq(it,d,b){b=b||'';const day=D(),k=it.hh||('new:'+(it.brand||'')+' '+it.name);
-  let x=S.Q.find(x=>x.kho===S.kho&&x.day===day&&x.k===k&&(x.batch===b||!b||(!x.batch&&!d)));
-  const bc=bcOf(it);if(x){x.q+=d;if(b)x.batch=b;if(!x.bc)x.bc=bc}else S.Q.push({kho:S.kho,pin:S.pin,day,k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:d,bc,batch:b,who:S.who,t:Date.now()});
-  bump(it,d,b);svShow();clearTimeout(S.qT);S.qT=setTimeout(flush,1500)}
-function held(x){const c=S.cur;return c&&c.it&&x.q>0&&!x.batch&&!x.from&&x.k===(c.it.hh||('new:'+(c.it.brand||'')+' '+c.it.name))&&Date.now()-(x.t||0)<30000}
-async function flush(force){clearTimeout(S.qT);if(S.fl||!S.Q.length)return;const keep=force===true?[]:S.Q.filter(held);const items=S.Q.filter(x=>!keep.includes(x)&&(x.q||x.batch));S.Q=keep;if(keep.length)S.qT=setTimeout(flush,3000);if(!items.length)return;S.fl=items.length;svShow();
+const ik=it=>it.hh||('new:'+(it.brand||'')+' '+it.name);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function sid(){return S.cur?(S.cur.sid||(S.cur.sid=uid())):''}
+function adjStock(it,d,b){const sg={out:-1,move:-1,in:1,recv:1,ret:1}[S.mode];if(!sg||!S.stock||!d)return;const r=S.stock.find(r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name));if(!r)return;const i=S.kho==='hip'?12:13;const q=parseBq(r[i]);q[b||'']=(q[b||'']||0)+sg*d;r[i]=bqStr(q)}
+function relabel(it,old,v,u){old=old||'';if(old===v)return;const k=ik(it),r=(S.rows||[]).find(r=>rk(r)===k),sd=S.cur&&S.cur.sid,day=D();
+  const mv=(a,b,n)=>{if(r&&n>0){const q=parseBq(r[7]);q[a]=(q[a]||0)-n;q[b]=(q[b]||0)+n;r[7]=bqStr(q)}},base={kho:S.kho,pin:S.pin,day,k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:0,bc:bcOf(it),batch:v,who:S.who,t:Date.now(),sid:sd};
+  let moved=0;if(sd)S.Q.filter(x=>x.sid===sd&&x.k===k&&x.day===day&&x.q>0&&!x.from&&!x.asg&&x.batch===old).forEach(x=>{x.batch=v;moved+=x.q});mv(old,v,moved);
+  if(old){const left=Math.max(0,(u||0)-moved);if(left>0){S.Q.push(Object.assign({},base,{from:old,n:left,cid:uid()}));mv(old,v,left)}toast('Đã đổi sang lô '+v)}
+  else{const pend=S.Q.filter(x=>x.k===k&&x.day===day&&!x.batch&&x.q>0).reduce((a,x)=>a+x.q,0),saved=(r?(parseBq(r[7])['']||0):0)-pend;
+    if(saved>0){S.Q.push(Object.assign({},base,{asg:1,cid:uid()}));mv('',v,saved)}
+    if(!moved&&saved<=0){toast('Đã chọn lô '+v+' — lần đếm tiếp theo sẽ ghi vào lô này');return}toast('Đã gán lô '+v)}
+  renderSum(S.rows,1);svShow();clearTimeout(S.qT);S.qT=setTimeout(flush,800)}
+function undoCard(c){if(!c||!c.it||!(c.u>0))return;const k=ik(c.it);let n=0;S.Q.filter(x=>c.sid&&x.sid===c.sid&&x.k===k&&x.q>0&&!x.from&&!x.asg).forEach(x=>{n+=x.q;bump(c.it,-x.q,x.batch);adjStock(c.it,-x.q,x.batch);S.Q.splice(S.Q.indexOf(x),1)});
+  const rest=c.u-n;if(rest>0){const keep=S.cur;S.cur=c;enq(c.it,-rest,c.batch||'');S.cur=keep}c.u=0;svShow()}
+function enq(it,d,b){b=b||'';const day=D(),k=ik(it),sd=sid();
+  const x=d<0?S.Q.find(x=>x.sid===sd&&x.k===k&&x.day===day&&x.batch===b&&x.q>0&&!x.from&&!x.asg):null;
+  if(x){x.q+=d;if(x.q<=0)S.Q.splice(S.Q.indexOf(x),1)}else S.Q.push({kho:S.kho,pin:S.pin,day,k,hh:it.hh||'',name:it.name,brand:it.brand||'',q:d,bc:bcOf(it),batch:b,who:S.who,t:Date.now(),sid:sd,cid:uid()});
+  bump(it,d,b);adjStock(it,d,b);svShow();clearTimeout(S.qT);S.qT=setTimeout(flush,1500)}
+function held(x){const c=S.cur;return c&&c.it&&c.sid&&x.sid===c.sid&&x.q>0&&!x.batch&&!x.from&&!x.asg&&Date.now()-(x.t||0)<30000}
+async function flush(force){clearTimeout(S.qT);if(S.fl||!S.Q.length)return;const keep=force===true?[]:S.Q.filter(held);const items=S.Q.filter(x=>!keep.includes(x)&&(x.q||x.from||x.asg));S.Q=keep;if(keep.length)S.qT=setTimeout(flush,3000);if(!items.length)return;S.fl=items.length;svShow();
   const g={};items.forEach(x=>(g[x.kho+'|'+x.day]=g[x.kho+'|'+x.day]||[]).push(x));let last=null;
-  try{for(const key of Object.keys(g)){const a=g[key];const rows=await run('addCounts',a[0].kho,a[0].pin,a[0].day,a.map(x=>({hh:x.hh,name:x.name,brand:x.brand,q:x.q,bc:x.bc,batch:x.batch,who:x.who,from:x.from||'',n:x.n||0})));delete g[key];if(a[0].day===D()&&a[0].kho===S.kho)last=rows}
+  try{for(const key of Object.keys(g)){const a=g[key];const rows=await run('addCounts',a[0].kho,a[0].pin,a[0].day,a.map(x=>({hh:x.hh,name:x.name,brand:x.brand,q:x.q,bc:x.bc,batch:x.batch,who:x.who,from:x.from||'',n:x.n||0,asg:x.asg?1:0,cid:x.cid})));delete g[key];if(a[0].day===D()&&a[0].kho===S.kho)last=rows}
     S.fl=0;if(S.Q.length)S.qT=setTimeout(flush,300);else if(last)renderSum(last);svShow()}
   catch(e){S.Q=Object.values(g).flat().concat(S.Q);S.fl=0;svShow();st('Chưa ghi được: '+e.message+' — app sẽ tự thử lại.',true);toast('⚠ Chưa lưu được, đang thử lại…');try{navigator.vibrate&&navigator.vibrate([200,80,200])}catch(x){}S.qT=setTimeout(flush,4000)}}
-document.addEventListener('visibilitychange',()=>{if(document.hidden)flush(true)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)return flush(true);const t=today();if(S.mode!=='count'&&S.dayAuto&&S.day===S.dayAuto&&t!==S.day){S.day=S.dayAuto=t;if($('#day'))$('#day').value=t;loadSum()}});
 window.addEventListener('beforeunload',e=>{if(S.Q.length||S.fl){flush(true);e.preventDefault();e.returnValue=''}});
 function mvWarn(it){if(S.mode!=='move'&&S.mode!=='recv')return;const r=(S.rows||[]).find(r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name));if(r&&r[6]>0){setTimeout(()=>toast('⚠ Kho kia đã ghi chuyển '+r[6]+' cái món này hôm nay — kiểm tra kẻo ghi 2 lần'),300);try{navigator.vibrate&&navigator.vibrate([150,80,150])}catch(e){}}}
-function add(it,d){if(d>0)mvWarn(it);if(S.mode==='out'&&!S.oc){st('Chọn đơn trước (quét mã vận đơn hoặc gõ mã HD) rồi mới quét món.',true);toast('⚠ Chưa chọn đơn');return}if(d>0)ocWarn(it,d);if(d<0&&totalOf(it)+d<0)return st('Món này chưa có số để bớt.',true);S.cur.u=(S.cur.u||0)+d;enq(it,d,S.cur?.batch||'');draw();toast((d>0?'+':'')+d+' · '+it.name.slice(0,40)+' → '+totalOf(it))}
+function add(it,d){if(d>0)mvWarn(it);if(S.mode==='out'&&!S.oc){st('Chọn đơn trước (quét mã vận đơn hoặc gõ mã HD) rồi mới quét món.',true);toast('⚠ Chưa chọn đơn');return}if(d>0)ocWarn(it,d);if(d<0&&totalOf(it)+d<0)return st('Món này chưa có số để bớt.',true);if(d<0){const b=S.cur?.batch||'',r=(S.rows||[]).find(r=>rk(r)===ik(it)),a=r?(parseBq(r[7])[b]||0):0;if(a+d<0)return st((b?'Lô '+b:'Phần chưa rõ lô')+' không còn số để bớt — chọn đúng lô trước khi bấm −.',true)}S.cur.u=(S.cur.u||0)+d;enq(it,d,S.cur?.batch||'');draw();toast((d>0?'+':'')+d+' · '+it.name.slice(0,40)+' → '+totalOf(it))}
 
 function loadSum(){$('#sumT').textContent=MODE[S.mode][0]+(S.mode==='out'?' · '+(S.oc||'chưa chọn đơn'):'')+' '+S.day.split('-').reverse().join('/');if(S.mode==='out'&&!S.oc){renderSum([]);return}if(S.Q.length||S.fl){flush();setTimeout(loadSum,800);return}run('getSummary',S.kho,S.pin,D()).then(r=>{if(!S.Q.length&&!S.fl)renderSum(r)}).catch(e=>st(e.message,true))}
 function totalOf(it){const r=(S.rows||[]).find(r=>it.hh?r[0]===it.hh:(!r[0]&&r[1]===it.name));return r?r[3]:0}
@@ -531,7 +539,7 @@ $('#odSave').onclick=async()=>{const raw=$('#odCust').value.trim(),ch=$('#odCh')
     cust:m?m[1]:raw,khCode:m?m[2]:'',ship:$('#odShip').value.trim().toUpperCase(),note:$('#odNote').value.trim(),who:S.who,rate:isOrdForm()?odRt():0,lines:S.od.map(l=>({hh:l.hh,name:l.name,detail:l.detail,qty:+l.qty||1,price:+l.price||0,w:isOrdForm()?(+l.w||0):0}))};
   const b=$('#odSave'),lbl=b.textContent;b.disabled=true;b.textContent='Đang lưu…';
   try{let code;if(S.edit){code=S.edit;S.ao=await run('updateOrder',S.kho,S.pin,code,o);renderAO();ocShow()}
-    else{const r=await run('createOrder',S.kho,S.pin,o);code=r.code;if(o.rate)S.rate=o.rate;if(!m)S.cust=null;if(r.ao){S.ao=r.ao;renderAO();ocShow()}else await loadAO()}
+    else{o.cid=o.cid||uid();const r=await run('createOrder',S.kho,S.pin,o);code=r.code;if(o.rate)S.rate=o.rate;if(!m)S.cust=null;if(r.ao){S.ao=r.ao;renderAO();ocShow()}else await loadAO()}
     if(o.fee){try{localStorage.setItem('fee:'+code,o.fee)}catch(e){}}
     S.lastAO=findAO(code)||[code,o.d,o.type==='order'?'Order':'Hàng sẵn',o.ch,o.cust||'Khách lẻ',o.ship,o.note,o.who,o.st,o.lines.map(l=>[l.hh,l.name,l.detail,l.qty,l.price,l.w]),'',o.fee,o.coc,false,'','','',o.rate];
     const was=!!S.edit;odReset();try{localStorage.removeItem(ckK(code))}catch(e){}
@@ -539,7 +547,7 @@ $('#odSave').onclick=async()=>{const raw=$('#odCust').value.trim(),ch=$('#odCh')
   catch(x){toast('Chưa lưu được: '+x.message);b.textContent=lbl}finally{b.disabled=false;if(b.textContent==='Đang lưu…')b.textContent=lbl}};
 $('#odDone').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.cp)return copyTxt(b.dataset.cp,'Đã chép '+b.dataset.cp);
   if(b.dataset.bl&&S.lastAO)return copyTxt(billText(S.lastAO),'Đã chép bill — dán vào tin nhắn cho khách');if(b.dataset.sb&&S.lastAO)return shareTxt(billText(S.lastAO))};
-function payOf(o){if(o[8]==='Hủy')return null;if(o[3]==='Shopee')return{t:'Shopee thu',ok:1};const t=aoTotal(o),cc=+o[12]||0;if(t>0&&cc>=t)return{t:'Đã trả đủ',ok:1};return cc>0?{t:'Cọc '+vnd(cc)+' · còn '+vnd(t-cc),ok:0,due:t}:{t:'Chưa trả',ok:0,due:t}}
+function payOf(o){if(o[8]==='Hủy')return null;if(o[3]==='Shopee')return{t:'Shopee thu',ok:1};const t=aoTotal(o)+feeOf(o),cc=+o[12]||0;if(t>0&&cc>=t)return{t:'Đã trả đủ',ok:1};return cc>0?{t:'Cọc '+vnd(cc)+' · còn '+vnd(t-cc),ok:0,due:t}:{t:'Chưa trả',ok:0,due:t}}
 function renderAO(){const F=$('#odF').value,L=(S.ao||[]).filter(o=>F!=='unpaid'||(payOf(o)&&!payOf(o).ok));$('#odList').innerHTML=L.length?L.map(o=>{const fin=!!ST_FIN[o[8]],ord=o[2]==='Order',pay=payOf(o);
   return `<div class="po"><div><b class="mono">${esc(o[0])}</b> · ${dshort(o[1])} · ${esc(o[3])} · ${esc(o[4])} <span class="chip ${fin?'':'warn'}">${esc(o[8])}</span>${pay?` <span class="chip ${pay.ok?'':'warn'}">${pay.ok?'💰 ':''}${esc(pay.t)}</span>`:''}${o[10]?' <span class="chip">đã xuất '+esc(o[10])+'</span>':''}${o[13]?' <span class="chip">đã vào sổ</span>':''}</div>
   <div class="st">${esc(o[2])}${o[5]?' · '+(o[3]==='Shopee'?'mã Shopee ':'vận đơn ')+esc(o[5]):''}${o[15]?' · báo khách '+dshort(o[15]):''}${o[6]?' · '+esc(o[6]):''}</div>${o[9].map(l=>`<div class="st" style="color:var(--ink)">${l[3]} × ${esc(l[1])}${l[2]?' — '+esc(l[2]):''}${l[4]?' · '+vnd(l[4]):''}${ord&&l[5]?' · cân '+l[5]+'kg':''}${(l[4]||l[5])?' = '+vnd(lineAmt(l,ord,rateOf(o))):''}</div>`).join('')}
