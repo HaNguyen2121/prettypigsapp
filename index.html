@@ -199,9 +199,9 @@ const rowsHtml=a=>a.map(x=>`<button class="r" data-h="${esc(x[0])}"><span><span 
 const BK=b=>fold(b).replace(/[^a-z0-9]/g,'');
 const ELC=new Set(['esteelauder','clinique','origins','mac','maccosmetics','bobbibrown','lamer','smashbox','toofaced','aveda','bumbleandbumble','jomalone','jomalonelondon','drjart','tomford','lelabo','glamglow','darphin','kilian']);
 const LOR=new Set(['kiehls','lancome','urbandecay','pureology','cerave','larocheposay','vichy','garnier','itcosmetics','ysl','yvessaintlaurent','armani','giorgioarmani','maybelline','biotherm','redken','kerastase','shuuemura','youthtothepeople','loreal','lorealparis','nyx','nyxprofessionalmakeup','essie','matrix','mugler','azzaro','valentino','viktorrolf','ralphlauren','skinceuticals','helenarubinstein']);
-const BBW=new Set(['bathbodyworks','bathandbodyworks','drunkelephant','philosophy']);const JUL=new Set(['naturium','katesomerville']);
-const YML=new Set(['olehenriksen']),MUR=new Set(['murad']),ML='ABCDEFGHJKLM';/* chữ tháng bỏ I: A=1 … H=8, J=9, K=10, L=11, M=12 */
-const RN={naturium:'Naturium',katesomerville:'Kate Somerville',drunkelephant:'Drunk Elephant',philosophy:'Philosophy',olehenriksen:'Ole Henriksen',murad:'Murad'};
+const BBW=new Set(['bathbodyworks','bathandbodyworks','drunkelephant','philosophy','dermalogica']);const JUL=new Set(['naturium','katesomerville']);
+const YML=new Set(['olehenriksen','benefit','benefitcosmetics']),MUR=new Set(['murad']),ML='ABCDEFGHJKLM';/* chữ tháng bỏ I: A=1 … H=8, J=9, K=10, L=11, M=12 */
+const RN={dermalogica:'Dermalogica',benefit:'Benefit',benefitcosmetics:'Benefit',tatcha:'Tatcha',elizabetharden:'Elizabeth Arden',olaplex:'Olaplex',naturium:'Naturium',katesomerville:'Kate Somerville',drunkelephant:'Drunk Elephant',philosophy:'Philosophy',olehenriksen:'Ole Henriksen',murad:'Murad'};
 function yOf(d,m){const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;let best=null;for(let yy=2010;yy<2040;yy++)if(yy%10===d&&(yy<cy||(yy===cy&&m<=cm)))best=yy;return best}
 const LOR_Y='ABCDEFGHJKLMNPRSTVWXYZ';/* A=2004, chu ky 22 nam, bo I O Q U */
 function pickYear(cands,m){const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;const ok=cands.filter(y=>y<cy||(y===cy&&m<=cm));return ok.length?Math.max(...ok):null}
@@ -211,7 +211,10 @@ function decodeBatch(brand,code){const b=BK(brand),c=String(code||'').toUpperCas
   else if(BBW.has(b)||JUL.has(b)){const r=c.match(BBW.has(b)?/^(\d)(\d{3})[A-Z0-9]*$/:/^[A-Z](\d)(\d{3})[A-Z0-9]*$/);if(!r)return null;const doy=+r[2];if(doy<1||doy>366)return null;const d=+r[1];
     const cand=[];for(let yy=2010;yy<2040;yy++)if(yy%10===d)cand.push(yy);const dt=yy=>new Date(yy,0,doy);m=null;
     const now=new Date();const ok=cand.filter(yy=>dt(yy)<=now);if(!ok.length)return null;y=Math.max(...ok);m=dt(y).getMonth()+1;rule=RN[b]||'Bath & Body Works'}
-  else if(YML.has(b)||MUR.has(b)){const r=c.match(YML.has(b)?/^(\d)([A-HJ-M])[A-Z0-9]*$/:/^[A-Z](\d)([A-HJ-M])\d*$/);if(!r)return null;m=ML.indexOf(r[2])+1;y=yOf(+r[1],m);rule=RN[b]}
+  else if(YML.has(b)||MUR.has(b)){const r=c.match(YML.has(b)?/^(\d)([A-HJ-M])[A-Z0-9]*$/:/^[A-Z]{1,2}(\d)([A-HJ-M])\d*$/);if(!r)return null;m=ML.indexOf(r[2])+1;y=yOf(+r[1],m);rule=RN[b]}
+  else if(b==='tatcha'){const r=c.match(/^([A-HJ-M])(\d{2})(\d)[A-Z0-9]*$/);if(!r||+r[2]<1||+r[2]>31)return null;m=ML.indexOf(r[1])+1;y=yOf(+r[3],m);rule=RN[b]}
+  else if(b==='elizabetharden'){const r=c.match(/^[A-Z](\d{2})([1-9])(\d{2})[A-Z0-9]*$/);if(!r||+r[3]<1||+r[3]>31)return null;m=+r[2];y=2000+(+r[1]);if(y*12+m>new Date().getFullYear()*12+new Date().getMonth()+1)return null;rule=RN[b]}
+  else if(b==='olaplex'){const r=String(code||'').toUpperCase().split(/[-\s/]/)[0].replace(/[^A-Z0-9]/g,'').match(/^(\d{2})(\d{3})[A-Z]*$/);if(!r||+r[2]<1||+r[2]>366)return null;const dt=new Date(2000+(+r[1]),0,+r[2]);if(dt>new Date())return null;y=dt.getFullYear();m=dt.getMonth()+1;rule=RN[b]}
   else return null;
   if(!y)return null;const ex=new Date(y,m-1+36,1);const mo=(new Date().getFullYear()-y)*12+(new Date().getMonth()+1-m);
   return{t:ex.getTime(),mfg:String(m).padStart(2,'0')+'/'+y,exp:String(ex.getMonth()+1).padStart(2,'0')+'/'+ex.getFullYear(),age:mo,rule,expired:ex<=new Date(),soon:!(ex<=new Date())&&(ex-new Date())<183*864e5}}
