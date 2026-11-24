@@ -218,10 +218,13 @@ const RN={glowrecipe:'Glow Recipe',farmacy:'Farmacy',farmacybeauty:'Farmacy',bri
 function yOf(d,m){const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;let best=null;for(let yy=2010;yy<2040;yy++)if(yy%10===d&&(yy<cy||(yy===cy&&m<=cm)))best=yy;return best}
 const LOR_Y='ABCDEFGHJKLMNPRSTVWXYZ';/* A=2004, chu ky 22 nam, bo I O Q U */
 function pickYear(cands,m){const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;const ok=cands.filter(y=>y<cy||(y===cy&&m<=cm));return ok.length?Math.max(...ok):null}
+const KNOWN_B={'youthtothepeople|AA2P03':[2022,2]}; // lô không theo quy tắc chung: ngày đã tra tay
 function decodeBatch(brand,code){const xm=String(code||'').toUpperCase().replace(/\s+/g,'').match(/^(?:EXP|HSD|HD|BB|BBE)[:.\-]?(?:(\d{1,2})[\/.\-])?(\d{1,2})[\/.\-](\d{4}|\d{2})$/);
   if(xm){const M=+xm[2],Y=xm[3].length===2?2000+(+xm[3]):+xm[3];if(M<1||M>12)return null;const ex=new Date(Y,M-1,+(xm[1]||1));const now=new Date();return{t:ex.getTime(),mfg:'',exp:(xm[1]?String(+xm[1]).padStart(2,'0')+'/':'')+String(M).padStart(2,'0')+'/'+Y,age:null,rule:'HSD in trên bao bì',direct:true,expired:ex<=now,soon:!(ex<=now)&&(ex-now)<183*864e5}}
-  const b=BK(brand),c=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');let m,y,rule;
-  if(ELC.has(b)){const r=c.match(/^[A-Z0-9]([1-9ABC])(\d)[A-Z0-9]?$/);if(!r)return null;m='123456789ABC'.indexOf(r[1])+1;const d=+r[2];y=pickYear([0,1,2,3].map(k=>2000+d+10*k).filter(x=>x<2040),m);rule='Estée Lauder'}
+  const b=BK(brand),c=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');let m,y,rule;const kn=KNOWN_B[b+'|'+c];
+  if(kn){y=kn[0];m=kn[1];rule='ngày tra trên web'}
+  else if(ELC.has(b)){const r=c.match(/^[A-Z0-9]([1-9ABC])(\d)[A-Z0-9]?$/);if(!r)return null;m='123456789ABC'.indexOf(r[1])+1;const d=+r[2];y=pickYear([0,1,2,3].map(k=>2000+d+10*k).filter(x=>x<2040),m);rule='Estée Lauder'}
+  else if(b==='youthtothepeople'&&/^[A-Z]{2}\d{3}/.test(c)){const i=LOR_Y.indexOf(c[0]==='U'?'V':c[0]),dd=+c.slice(2,5);if(i<0||dd<1||dd>366)return null;let best=null;for(const yy of [2004+i,2026+i]){const dt=new Date(yy,0,dd);if(dt<=new Date())best=dt}if(!best)return null;y=best.getFullYear();m=best.getMonth()+1;rule="L'Oréal (chữ đầu = năm, 3 số = ngày trong năm)"}
   else if(LOR.has(b)){const r=c.match(/^[A-Z0-9]{2}([A-Z])([0-9OND])[A-Z0-9]{0,5}$/);if(!r)return null;const i=LOR_Y.indexOf(r[1]==='U'?'V':r[1]);if(i<0)return null;m=r[2]==='O'||r[2]==='0'?10:r[2]==='N'?11:r[2]==='D'?12:+r[2];y=pickYear([2004+i,2026+i],m);rule="L'Oréal"}
   else if(BBW.has(b)||JUL.has(b)){const r=c.match(BBW.has(b)?/^(\d)(\d{3})[A-Z0-9]*$/:/^[A-Z](\d)(\d{3})[A-Z0-9]*$/);if(!r)return null;const doy=+r[2];if(doy<1||doy>366)return null;const d=+r[1];
     const cand=[];for(let yy=2010;yy<2040;yy++)if(yy%10===d)cand.push(yy);const dt=yy=>new Date(yy,0,doy);m=null;
